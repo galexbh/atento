@@ -48,7 +48,14 @@
   ],
   "vars": {
     "SITE_URL": "https://atento.galexbh.dev",
-    "ENTORNO": "produccion"
+    "ENTORNO": "produccion",
+    // Panel /admin: "password" (contraseña única, secreto ADMIN_PASSWORD_HASH) o "access"
+    // (Cloudflare Access: rellenar ACCESS_TEAM_DOMAIN, ACCESS_AUD, ADMIN_EMAILS, INVESTIGADOR_EMAILS).
+    "ADMIN_MODO": "password",
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    "ADMIN_EMAILS": "info@galexbh.dev",
+    "INVESTIGADOR_EMAILS": ""
   },
   "routes": [{ "pattern": "atento.galexbh.dev", "custom_domain": true }],
   "triggers": {
@@ -83,7 +90,12 @@
       ],
       "vars": {
         "SITE_URL": "https://atento-preview.galexbh.dev",
-        "ENTORNO": "preview"
+        "ENTORNO": "preview",
+        "ADMIN_MODO": "password",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": "",
+        "ADMIN_EMAILS": "info@galexbh.dev",
+        "INVESTIGADOR_EMAILS": ""
       },
       "routes": [{ "pattern": "atento-preview.galexbh.dev", "custom_domain": true }],
       "triggers": {
