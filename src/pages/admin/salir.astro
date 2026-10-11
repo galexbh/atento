@@ -1,0 +1,7 @@
+---
+import { procesarSalir } from "@/lib/admin/sesion";
+
+// POST /admin/salir cierra la sesión (modo password). Un GET solo vuelve al panel.
+if (Astro.request.method === "POST") return procesarSalir(Astro.request);
+return Astro.redirect("/admin", 302);
+---

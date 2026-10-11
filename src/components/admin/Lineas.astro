@@ -1,0 +1,127 @@
+---
+/** Gráfico de líneas SVG (hasta 3 series, colores fijos por serie) con leyenda y tabla de datos. */
+import Tabla from "./Tabla.astro";
+
+export interface Punto {
+  x: string;
+  y: number | null;
+  suprimido?: boolean;
+}
+export interface Serie {
+  nombre: string;
+  puntos: Punto[];
+}
+
+interface Props {
+  titulo: string;
+  series: Serie[];
+  unidad?: string;
+  max?: number;
+  id?: string;
+}
+const {
+  titulo,
+  series,
+  unidad = "",
+  max: maxProp,
+  id = `lineas-${Math.random().toString(36).slice(2, 8)}`,
+} = Astro.props;
+
+const etiquetasX = [...new Set(series.flatMap((s) => s.puntos.map((p) => p.x)))];
+const todos = series.flatMap((s) => s.puntos.map((p) => p.y ?? 0));
+const max = maxProp ?? Math.max(1, ...todos);
+const ancho = 640;
+const alto = 240;
+const mI = 48;
+const mD = 16;
+const mS = 12;
+const mInf = 36;
+const aw = ancho - mI - mD;
+const ah = alto - mS - mInf;
+const px = (i: number) =>
+  mI + (etiquetasX.length <= 1 ? aw / 2 : (i / (etiquetasX.length - 1)) * aw);
+const py = (v: number) => mS + ah - (v / max) * ah;
+const ticks = [0, 0.5, 1].map((t) => t * max);
+const fmt = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unidad}`;
+const colores = ["var(--viz-serie-1)", "var(--viz-serie-2)", "var(--viz-serie-3)"];
+const pasoEtiqueta = Math.max(1, Math.ceil(etiquetasX.length / 8));
+
+const columnas = [
+  { clave: "x", etiqueta: "Periodo" },
+  ...series.map((s, i) => ({ clave: `s${i}`, etiqueta: s.nombre, tipo: "num" as const })),
+];
+const filas = etiquetasX.map((x) => {
+  const fila: Record<string, string> = { x };
+  series.forEach((s, i) => {
+    const p = s.puntos.find((q) => q.x === x);
+    fila[`s${i}`] = !p || p.y === null ? "—" : p.suprimido ? "n < 5" : fmt(p.y);
+  });
+  return fila;
+});
+---
+
+<figure class="grafico">
+  <figcaption id={`${id}-t`}>{titulo}</figcaption>
+  {etiquetasX.length === 0 ? (
+    <p class="panel__nota">Sin datos para los filtros elegidos.</p>
+  ) : (
+    <svg class="viz" viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-labelledby={`${id}-t`}>
+      {ticks.map((t) => (
+        <g>
+          <line class="viz__rejilla" x1={mI} x2={ancho - mD} y1={py(t)} y2={py(t)} />
+          <text class="viz__eje-etq" x={mI - 6} y={py(t) + 4} text-anchor="end">{fmt(t)}</text>
+        </g>
+      ))}
+      <line class="viz__eje" x1={mI} x2={ancho - mD} y1={mS + ah} y2={mS + ah} />
+      {etiquetasX.map((x, i) =>
+        i % pasoEtiqueta === 0 ? (
+          <text class="viz__eje-etq" x={px(i)} y={alto - 14} text-anchor="middle">{x.length > 10 ? x.slice(-7) : x}</text>
+        ) : null,
+      )}
+      {series.map((s, si) => {
+        const puntos = etiquetasX.map((x, i) => {
+          const p = s.puntos.find((q) => q.x === x);
+          return { i, p };
+        });
+        const camino = puntos
+          .filter(({ p }) => p && p.y !== null && !p.suprimido)
+          .map(({ i, p }) => `${px(i).toFixed(1)},${py(p?.y as number).toFixed(1)}`)
+          .join(" ");
+        return (
+          <g>
+            <polyline points={camino} fill="none" stroke={colores[si % 3]} stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+            {puntos.map(({ i, p }) =>
+              p && p.y !== null && !p.suprimido ? (
+                <circle cx={px(i)} cy={py(p.y)} r="4" fill={colores[si % 3]} stroke="var(--color-superficie)" stroke-width="2">
+                  <title>{s.nombre} · {p.x}: {fmt(p.y)}</title>
+                </circle>
+              ) : p?.suprimido ? (
+                <circle cx={px(i)} cy={mS + ah - 4} r="3" fill="var(--viz-trama)">
+                  <title>{s.nombre} · {p.x}: n &lt; 5 (suprimido)</title>
+                </circle>
+              ) : null,
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  )}
+  {series.length >= 2 && (
+    <ul class="leyenda" aria-label="Leyenda">
+      {series.map((s, i) => (
+        <li><span class="leyenda__muestra" style={`background:${colores[i % 3]}`}></span>{s.nombre}</li>
+      ))}
+    </ul>
+  )}
+  <Tabla plegada columnas={columnas} filas={filas} />
+</figure>
+
+<style>
+  .grafico {
+    margin: 0;
+  }
+  .grafico figcaption {
+    font-weight: 600;
+    margin-bottom: var(--espacio-2);
+  }
+</style>

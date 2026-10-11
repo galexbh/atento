@@ -1,0 +1,111 @@
+---
+import { env } from "cloudflare:workers";
+import Cifra from "@/components/admin/Cifra.astro";
+import Lineas from "@/components/admin/Lineas.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtEntero, fmtFechaHora, fmtPct, fmtPctIc } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { etiquetaPeriodo, parsearFiltros } from "@/lib/reportes/filtros";
+import { reporteResumen } from "@/lib/reportes/resumen";
+import { diferencia } from "@/lib/reportes/supresion";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const resumen = await reporteResumen(env.DB, filtros);
+const comparado = filtros.comparar
+  ? await reporteResumen(env.DB, { ...filtros, periodo: filtros.comparar })
+  : null;
+
+function delta(
+  a: number | null,
+  b: number | null,
+  unidad = "",
+): { texto: string | null; sentido: "sube" | "baja" | "igual" } {
+  const d = diferencia(b, a); // b = periodo comparado (base), a = periodo actual
+  if (d.absoluta === null) return { texto: null, sentido: "igual" };
+  const signo = d.absoluta > 0 ? "+" : "";
+  const rel = d.relativa === null ? "" : ` (${signo}${d.relativa} %)`;
+  return {
+    texto: `${signo}${d.absoluta}${unidad}${rel} vs ${filtros.comparar}`,
+    sentido: d.absoluta > 0 ? "sube" : d.absoluta < 0 ? "baja" : "igual",
+  };
+}
+const dN = comparado ? delta(resumen.nPeriodo, comparado.nPeriodo) : null;
+const dPos = comparado ? delta(resumen.positivo.pct, comparado.positivo.pct, " pt") : null;
+const dComp = comparado ? delta(resumen.completitud.pct, comparado.completitud.pct, " pt") : null;
+
+const filasComparacion = comparado
+  ? [
+      {
+        indicador: "Respuestas completadas",
+        a: fmtEntero(comparado.nPeriodo),
+        b: fmtEntero(resumen.nPeriodo),
+        dif: dN?.texto ?? "—",
+      },
+      {
+        indicador: "% cribado positivo",
+        a: fmtPct(comparado.positivo),
+        b: fmtPct(resumen.positivo),
+        dif: dPos?.texto ?? "—",
+      },
+      {
+        indicador: "% combinado",
+        a: fmtPct(comparado.combinado),
+        b: fmtPct(resumen.combinado),
+        dif: delta(resumen.combinado.pct, comparado.combinado.pct, " pt").texto ?? "—",
+      },
+      {
+        indicador: "Completitud",
+        a: fmtPct(comparado.completitud),
+        b: fmtPct(resumen.completitud),
+        dif: dComp?.texto ?? "—",
+      },
+      {
+        indicador: "% con consentimiento",
+        a: fmtPct(comparado.consentimiento),
+        b: fmtPct(resumen.consentimiento),
+        dif: delta(resumen.consentimiento.pct, comparado.consentimiento.pct, " pt").texto ?? "—",
+      },
+    ]
+  : [];
+---
+
+<Admin titulo="Resumen" usuario={auth} filtros={filtros} activo="resumen">
+  <section class="rejilla" aria-label="Cifras principales">
+    <Cifra etiqueta="Respuestas completadas (histórico)" valor={fmtEntero(resumen.nTotalHistorico)} />
+    <Cifra etiqueta={`Completadas en ${etiquetaPeriodo(filtros.periodo).toLowerCase()}`} valor={fmtEntero(resumen.nPeriodo)} delta={dN?.texto} deltaSentido={dN?.sentido} />
+    <Cifra etiqueta="% cribado positivo" valor={fmtPct(resumen.positivo)} nota={resumen.positivo.ic95 ? `IC95 ${fmtPctIc(resumen.positivo).replace(/^.*\(IC95 /, "").replace(")", "")}` : undefined} delta={dPos?.texto} deltaSentido={dPos?.sentido} />
+    <Cifra etiqueta="% combinado (inatención + hiperactividad)" valor={fmtPct(resumen.combinado)} />
+    <Cifra etiqueta="Completitud" valor={fmtPct(resumen.completitud)} nota="completadas / iniciadas" delta={dComp?.texto} deltaSentido={dComp?.sentido} />
+    <Cifra etiqueta="% con consentimiento de investigación" valor={fmtPct(resumen.consentimiento)} />
+  </section>
+
+  <section class="panel">
+    <Lineas
+      titulo="Respuestas completadas por día, últimos 30 días (todos los filtros ignorados)"
+      series={[{ nombre: "Completadas", puntos: resumen.ultimos30.map((d) => ({ x: d.fecha, y: d.n.suprimido ? null : d.n.n, suprimido: d.n.suprimido })) }]}
+    />
+  </section>
+
+  {comparado && (
+    <section class="panel">
+      <h2>Comparación {etiquetaPeriodo(filtros.comparar as string)} → {etiquetaPeriodo(filtros.periodo)}</h2>
+      <Tabla
+        columnas={[
+          { clave: "indicador", etiqueta: "Indicador" },
+          { clave: "a", etiqueta: filtros.comparar as string, tipo: "num" },
+          { clave: "b", etiqueta: filtros.periodo, tipo: "num" },
+          { clave: "dif", etiqueta: "Diferencia (abs. y rel.)", tipo: "num" },
+        ]}
+        filas={filasComparacion}
+      />
+    </section>
+  )}
+
+  <section class="panel">
+    <h2>Estado</h2>
+    <p class="panel__nota">Última agregación: {fmtFechaHora(resumen.ultimaAgregacion)}. Entorno: {env.ENTORNO}. Más detalle en <a href="/admin/sistema">Sistema</a>.</p>
+  </section>
+</Admin>

@@ -1,0 +1,128 @@
+---
+import { env } from "cloudflare:workers";
+import Mapa from "@/components/admin/Mapa.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtPct, fmtPctIc, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { ESCALAS_SINTOMAS, ETIQUETA_ESCALA } from "@/lib/reportes/comun";
+import { etiquetaPeriodo, parsearFiltros } from "@/lib/reportes/filtros";
+import { type FilaGeo, reporteGeografia } from "@/lib/reportes/geografia";
+import { compararFilas, conteo } from "@/lib/reportes/supresion";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const datos = await reporteGeografia(env.DB, filtros);
+const metrica = Astro.url.searchParams.get("metrica") === "combinado" ? "combinado" : "positivo";
+const comparado = filtros.comparar
+  ? await reporteGeografia(env.DB, { ...filtros, periodo: filtros.comparar })
+  : null;
+
+function fila(f: FilaGeo) {
+  const base: Record<string, string> = {
+    codigo: f.codigo,
+    nombre: f.nombre,
+    n: f.suprimido ? SUPRIMIDO : fmtCelda(conteo(f.n)),
+    positivo: fmtPctIc(f.positivo),
+    combinado: fmtPct(f.combinado),
+  };
+  for (const e of ESCALAS_SINTOMAS) base[e] = fmtPct(f.escalas[e]);
+  return base;
+}
+const columnas = [
+  { clave: "codigo", etiqueta: "Código" },
+  { clave: "nombre", etiqueta: "Nombre" },
+  { clave: "n", etiqueta: "n", tipo: "num" as const },
+  { clave: "positivo", etiqueta: "% positivo (IC95)", tipo: "num" as const },
+  { clave: "combinado", etiqueta: "% combinado", tipo: "num" as const },
+  ...ESCALAS_SINTOMAS.map((e) => ({
+    clave: e,
+    etiqueta: `% ${ETIQUETA_ESCALA[e]}`,
+    tipo: "num" as const,
+  })),
+];
+const municipiosVisibles = datos.municipios.filter(
+  (m) => !filtros.departamento || m.departamento === filtros.departamento,
+);
+
+const comparacion = comparado
+  ? compararFilas(
+      comparado.departamentos.map((d) => ({
+        codigo: d.codigo,
+        nombre: d.nombre,
+        positivo: d.positivo,
+        n: conteo(d.n),
+      })),
+      datos.departamentos.map((d) => ({
+        codigo: d.codigo,
+        nombre: d.nombre,
+        positivo: d.positivo,
+        n: conteo(d.n),
+      })),
+      "codigo",
+      ["n", "positivo"],
+    ).map((c) => {
+      const nombre = datos.departamentos.find((d) => d.codigo === c.clave)?.nombre ?? c.clave;
+      const n = c.diferencias.n;
+      const p = c.diferencias.positivo;
+      const fmtDif = (d: typeof n, unidad: string) =>
+        !d || d.absoluta === null
+          ? "—"
+          : `${d.absoluta > 0 ? "+" : ""}${d.absoluta}${unidad}${d.relativa === null ? "" : ` (${d.relativa > 0 ? "+" : ""}${d.relativa} %)`}`;
+      return {
+        codigo: c.clave,
+        nombre,
+        nA: n?.a === null || n?.a === undefined ? SUPRIMIDO : String(n.a),
+        nB: n?.b === null || n?.b === undefined ? SUPRIMIDO : String(n.b),
+        difN: fmtDif(n, ""),
+        pA: p?.a === null || p?.a === undefined ? SUPRIMIDO : `${p.a} %`,
+        pB: p?.b === null || p?.b === undefined ? SUPRIMIDO : `${p.b} %`,
+        difP: fmtDif(p, " pt"),
+      };
+    })
+  : [];
+const enlaceMetrica = (m: string) => {
+  const p = new URLSearchParams(Astro.url.searchParams);
+  p.set("metrica", m);
+  return `/admin/geografia?${p.toString()}`;
+};
+---
+
+<Admin titulo="Geografía" usuario={auth} filtros={filtros} activo="geografia">
+  <section class="panel">
+    <p class="panel__nota">
+      Métrica del mapa:{" "}
+      <a href={enlaceMetrica("positivo")} style={metrica === "positivo" ? "font-weight:700" : ""}>positivo</a> ·
+      <a href={enlaceMetrica("combinado")} style={metrica === "combinado" ? "font-weight:700" : ""}>combinado</a>.
+      Total del periodo: n = {fmtCelda(conteo(datos.total.n))}, positivo {fmtPctIc(datos.total.positivo)}.
+    </p>
+    <Mapa titulo={`% cribado ${metrica} por departamento · ${etiquetaPeriodo(filtros.periodo)}`} departamentos={datos.departamentos} metrica={metrica} />
+  </section>
+  <section class="panel">
+    <h2>Por departamento</h2>
+    <Tabla columnas={columnas} filas={datos.departamentos.map(fila)} />
+  </section>
+  {comparado && (
+    <section class="panel">
+      <h2>Comparación por departamento: {filtros.comparar} → {filtros.periodo}</h2>
+      <Tabla
+        columnas={[
+          { clave: "codigo", etiqueta: "Código" },
+          { clave: "nombre", etiqueta: "Departamento" },
+          { clave: "nA", etiqueta: `n ${filtros.comparar}`, tipo: "num" },
+          { clave: "nB", etiqueta: `n ${filtros.periodo}`, tipo: "num" },
+          { clave: "difN", etiqueta: "Dif. n", tipo: "num" },
+          { clave: "pA", etiqueta: `% pos. ${filtros.comparar}`, tipo: "num" },
+          { clave: "pB", etiqueta: `% pos. ${filtros.periodo}`, tipo: "num" },
+          { clave: "difP", etiqueta: "Dif. % (abs., rel.)", tipo: "num" },
+        ]}
+        filas={comparacion}
+      />
+    </section>
+  )}
+  <section class="panel">
+    <h2>Por municipio {filtros.departamento ? `(departamento ${filtros.departamento})` : "(todos; filtra por departamento para acotar)"}</h2>
+    <Tabla columnas={columnas} filas={municipiosVisibles.map(fila)} vacio="Sin respuestas en municipios para los filtros elegidos." />
+  </section>
+</Admin>

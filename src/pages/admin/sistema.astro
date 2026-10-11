@@ -1,0 +1,108 @@
+---
+import { env } from "cloudflare:workers";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtEntero, fmtFechaHora } from "@/lib/admin/formato";
+import { leerAuditoria, protegerPagina } from "@/lib/admin/proteger";
+import { obtenerRecalculador, procesarSistema } from "@/lib/admin/sesion";
+
+if (Astro.request.method === "POST") return procesarSistema(Astro.request);
+
+const auth = await protegerPagina(Astro.request, "admin");
+if (auth instanceof Response) return auth;
+const msg = Astro.url.searchParams.get("msg");
+const MENSAJES: Record<string, string> = {
+  "mantenimiento-activado":
+    "Modo mantenimiento activado: el sitio público responde 503 (el panel sigue accesible). Tarda hasta 60 s en aplicarse por la caché.",
+  "mantenimiento-desactivado": "Modo mantenimiento desactivado.",
+  "recalculo-ok": "Agregados recalculados.",
+  "recalculo-pendiente":
+    "El módulo de agregados (src/lib/agregados) aún no expone recalcularAgregados: pendiente.",
+  "recalculo-error": "El recálculo falló; revisa los registros del Worker.",
+};
+
+async function contar(tabla: string): Promise<number> {
+  try {
+    const f = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${tabla}`).first<{ n: number }>();
+    return f?.n ?? 0;
+  } catch {
+    return -1;
+  }
+}
+const [
+  mantenimiento,
+  nRespuestas,
+  nAgregados,
+  nAnuales,
+  nPsico,
+  nAuditoria,
+  ultimaAgregacion,
+  auditoria,
+  recalculador,
+] = await Promise.all([
+  env.DB.prepare("SELECT valor FROM configuracion WHERE clave = 'mantenimiento'").first<{
+    valor: string;
+  }>(),
+  contar("respuestas"),
+  contar("agregados_municipio"),
+  contar("agregados_anuales"),
+  contar("agregados_psicometria"),
+  contar("auditoria_admin"),
+  env.DB.prepare("SELECT MAX(calculado_en) AS c FROM agregados_municipio")
+    .first<{ c: string | null }>()
+    .catch(() => null),
+  leerAuditoria(50),
+  obtenerRecalculador(),
+]);
+const enMantenimiento = mantenimiento?.valor === "1";
+---
+
+<Admin titulo="Sistema" usuario={auth} sinFiltros activo="sistema">
+  {msg && MENSAJES[msg] && <p class="aviso" role="status">{MENSAJES[msg]}</p>}
+  <section class="rejilla rejilla--2">
+    <div class="panel">
+      <h2>Modo mantenimiento</h2>
+      <p>Estado actual: <strong>{enMantenimiento ? "ACTIVADO" : "desactivado"}</strong>. Escribe <code>configuracion.mantenimiento</code>; el middleware responde 503 en todo salvo <code>/admin*</code>.</p>
+      <form method="post" action="/admin/sistema">
+        <input type="hidden" name="accion" value={enMantenimiento ? "mantenimiento_off" : "mantenimiento_on"} />
+        <button type="submit" class={enMantenimiento ? "boton" : "boton boton--peligro"}>{enMantenimiento ? "Desactivar mantenimiento" : "Activar mantenimiento"}</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>Agregados</h2>
+      <p>Última agregación: {fmtFechaHora(ultimaAgregacion?.c ?? null)}. Módulo de recálculo: <strong>{recalculador ? "disponible" : "pendiente"}</strong>.</p>
+      <form method="post" action="/admin/sistema">
+        <input type="hidden" name="accion" value="recalcular_agregados" />
+        <button type="submit" class="boton" disabled={!recalculador}>Recalcular agregados</button>
+      </form>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>Estado de D1</h2>
+    <Tabla
+      columnas={[{ clave: "tabla", etiqueta: "Tabla" }, { clave: "filas", etiqueta: "Filas", tipo: "num" }]}
+      filas={[
+        { tabla: "respuestas", filas: fmtEntero(nRespuestas) },
+        { tabla: "agregados_municipio", filas: fmtEntero(nAgregados) },
+        { tabla: "agregados_anuales", filas: fmtEntero(nAnuales) },
+        { tabla: "agregados_psicometria", filas: fmtEntero(nPsico) },
+        { tabla: "auditoria_admin", filas: fmtEntero(nAuditoria) },
+      ]}
+    />
+    <p class="panel__nota">Entorno: {env.ENTORNO} · modo de acceso: {env.ADMIN_MODO ?? "access"}.</p>
+  </section>
+  <section class="panel">
+    <h2>Registro de auditoría (últimas 50 acciones)</h2>
+    <Tabla
+      columnas={[
+        { clave: "fecha", etiqueta: "Fecha y hora" },
+        { clave: "usuario", etiqueta: "Usuario" },
+        { clave: "accion", etiqueta: "Acción" },
+        { clave: "filtros", etiqueta: "Filtros" },
+        { clave: "filas", etiqueta: "Filas", tipo: "num" },
+      ]}
+      filas={auditoria.map((a) => ({ fecha: fmtFechaHora(a.fecha_hora), usuario: a.usuario, accion: a.accion, filtros: a.filtros ?? "", filas: a.filas === null ? "" : fmtEntero(a.filas) }))}
+      vacio="Aún no hay acciones registradas."
+    />
+  </section>
+</Admin>

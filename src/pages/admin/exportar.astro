@@ -1,0 +1,49 @@
+---
+import Admin from "@/layouts/Admin.astro";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { NOMBRES_REPORTE } from "@/lib/reportes";
+import { filtrosAQuery, parsearFiltros } from "@/lib/reportes/filtros";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const q = filtrosAQuery(filtros);
+const enlace = (extra: Record<string, string>) =>
+  `/api/admin/exportar?${filtrosAQuery(filtros, extra)}`;
+const reportes = NOMBRES_REPORTE.filter((n) => n !== "resumen");
+---
+
+<Admin titulo="Exportar" usuario={auth} filtros={filtros} activo="exportar">
+  <section class="panel">
+    <h2>Agregados (cualquier rol)</h2>
+    <p class="panel__nota">Mismos datos del panel, con celdas n &lt; 5 suprimidas, para el periodo y filtros activos ({q || "sin filtros"}). Cada descarga queda registrada en auditoría.</p>
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead><tr><th scope="col">Reporte</th><th scope="col">CSV</th><th scope="col">JSON</th></tr></thead>
+        <tbody>
+          {reportes.map((r) => (
+            <tr>
+              <td>{r}</td>
+              <td><a href={enlace({ tipo: "agregados", reporte: r, formato: "csv" })} download>CSV</a></td>
+              <td><a href={enlace({ tipo: "agregados", reporte: r, formato: "json" })} download>JSON</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>Microdatos anonimizados (solo rol admin)</h2>
+    <p>Solo respuestas con consentimiento de investigación. Fecha reducida a mes; municipio en blanco cuando tiene n &lt; 5 en el archivo (queda el departamento); ítems expandidos a columnas V01…V54 y A01…A18. Cabeceras en snake_case, UTF-8 con BOM, separador coma (compatible con R, SPSS y Excel).</p>
+    {auth.rol === "admin" ? (
+      <p>
+        <a class="boton" href={enlace({ tipo: "microdatos", formato: "csv" })} download>Descargar CSV</a>
+        <a class="boton boton--secundario" href={enlace({ tipo: "microdatos", formato: "json" })} download>Descargar JSON</a>
+        <a class="boton boton--secundario" href="/api/admin/exportar?tipo=codebook" download>Codebook (Markdown)</a>
+      </p>
+    ) : (
+      <p class="aviso">Tu rol ({auth.rol}) no permite descargar microdatos. El codebook sí está disponible: <a href="/api/admin/exportar?tipo=codebook" download>descargar</a>.</p>
+    )}
+    <p class="panel__nota">Uso bajo acuerdo con el socio académico. La exportación registra usuario, filtros y número de filas en <code>auditoria_admin</code>.</p>
+  </section>
+</Admin>

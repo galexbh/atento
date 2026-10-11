@@ -1,0 +1,65 @@
+---
+import { env } from "cloudflare:workers";
+import Cifra from "@/components/admin/Cifra.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtDecimal, fmtPct, fmtPctIc, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+import { reporteInvestigacion } from "@/lib/reportes/investigacion";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteInvestigacion(env.DB, filtros);
+const con = d.perfiles.find((p) => p.grupo === "con_consentimiento");
+const sin = d.perfiles.find((p) => p.grupo === "sin_consentimiento");
+const filas = [
+  { indicador: "n", con: fmtCelda(con?.n), sin: fmtCelda(sin?.n) },
+  {
+    indicador: "Edad media",
+    con:
+      con?.edadMedia === null || con?.edadMedia === undefined
+        ? SUPRIMIDO
+        : fmtDecimal(con.edadMedia),
+    sin:
+      sin?.edadMedia === null || sin?.edadMedia === undefined
+        ? SUPRIMIDO
+        : fmtDecimal(sin.edadMedia),
+  },
+  ...["F", "M", "X"].map((s) => ({
+    indicador: `% sexo ${s}`,
+    con: fmtPct(con?.sexo[s]),
+    sin: fmtPct(sin?.sexo[s]),
+  })),
+  ...["bajo", "moderado", "alto"].map((n) => ({
+    indicador: `% nivel ${n}`,
+    con: fmtPct(con?.nivel[n]),
+    sin: fmtPct(sin?.nivel[n]),
+  })),
+  {
+    indicador: "% cribado positivo (IC95)",
+    con: fmtPctIc(con?.positivo),
+    sin: fmtPctIc(sin?.positivo),
+  },
+];
+---
+
+<Admin titulo="Investigación y consentimiento" usuario={auth} filtros={filtros} activo="investigacion">
+  <section class="rejilla" aria-label="Consentimiento">
+    <Cifra etiqueta="Respuestas completadas" valor={fmtCelda({ n: d.n, suprimido: false })} />
+    <Cifra etiqueta="% que acepta donar sus datos para investigación" valor={fmtPct(d.consentimiento)} nota={fmtPctIc(d.consentimiento)} />
+  </section>
+  <section class="panel">
+    <h2>Perfil con y sin consentimiento (sesgo de la muestra donada)</h2>
+    <p class="panel__nota">El filtro «solo con consentimiento» se ignora en esta página para poder comparar ambos grupos.</p>
+    <Tabla
+      columnas={[
+        { clave: "indicador", etiqueta: "Indicador" },
+        { clave: "con", etiqueta: "Con consentimiento", tipo: "num" },
+        { clave: "sin", etiqueta: "Sin consentimiento", tipo: "num" },
+      ]}
+      filas={filas}
+    />
+  </section>
+</Admin>

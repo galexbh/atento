@@ -1,0 +1,135 @@
+---
+import { listarDepartamentos } from "@/lib/catalogo/geo";
+import { listarInstrumentos } from "@/lib/puntuacion/instrumentos";
+import { type Filtros, INFORMANTES, periodoActual, SEXOS } from "@/lib/reportes/filtros";
+
+interface Props {
+  filtros: Filtros;
+}
+
+const { filtros } = Astro.props;
+const anio = Number(periodoActual());
+const opcionesPeriodo: Array<{ valor: string; etiqueta: string }> = [
+  { valor: "acumulado", etiqueta: "Acumulado" },
+  ...[anio, anio - 1, anio - 2].map((a) => ({ valor: String(a), etiqueta: `Año ${a}` })),
+  ...[1, 2, 3, 4].map((q) => ({ valor: `${anio}-Q${q}`, etiqueta: `${anio} · T${q}` })),
+  ...Array.from({ length: 12 }, (_, i) => {
+    const m = String(i + 1).padStart(2, "0");
+    return { valor: `${anio}-${m}`, etiqueta: `${anio}-${m}` };
+  }),
+];
+for (const extra of [filtros.periodo, filtros.comparar]) {
+  if (extra && !opcionesPeriodo.some((o) => o.valor === extra)) {
+    opcionesPeriodo.unshift({ valor: extra, etiqueta: extra });
+  }
+}
+const departamentos = listarDepartamentos();
+const instrumentos = listarInstrumentos();
+const ruta = Astro.url.pathname;
+---
+
+<form class="filtros panel" method="get" action={ruta} aria-label="Filtros del reporte">
+  <div class="filtros__campo">
+    <label for="f-periodo">Periodo</label>
+    <select id="f-periodo" name="periodo">
+      {opcionesPeriodo.map((o) => <option value={o.valor} selected={o.valor === filtros.periodo}>{o.etiqueta}</option>)}
+    </select>
+  </div>
+  <div class="filtros__campo">
+    <label for="f-comparar">Comparar con</label>
+    <select id="f-comparar" name="comparar">
+      <option value="" selected={!filtros.comparar}>— sin comparación —</option>
+      {opcionesPeriodo.map((o) => <option value={o.valor} selected={o.valor === filtros.comparar}>{o.etiqueta}</option>)}
+    </select>
+  </div>
+  <div class="filtros__campo">
+    <label for="f-departamento">Departamento</label>
+    <select id="f-departamento" name="departamento">
+      <option value="" selected={!filtros.departamento}>Todos</option>
+      {departamentos.map((d) => <option value={d.codigo} selected={d.codigo === filtros.departamento}>{d.codigo} · {d.nombre}</option>)}
+    </select>
+  </div>
+  <div class="filtros__campo">
+    <label for="f-municipio">Municipio (código INE)</label>
+    <input id="f-municipio" name="municipio" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" value={filtros.municipio ?? ""} placeholder="0801" />
+  </div>
+  <div class="filtros__campo filtros__campo--doble">
+    <label for="f-edadMin">Edad</label>
+    <span>
+      <input id="f-edadMin" name="edadMin" type="number" min="6" max="12" value={filtros.edadMin ?? ""} aria-label="Edad mínima" />
+      –
+      <input id="f-edadMax" name="edadMax" type="number" min="6" max="12" value={filtros.edadMax ?? ""} aria-label="Edad máxima" />
+    </span>
+  </div>
+  <div class="filtros__campo">
+    <label for="f-sexo">Sexo</label>
+    <select id="f-sexo" name="sexo">
+      <option value="" selected={!filtros.sexo}>Todos</option>
+      {SEXOS.map((s) => <option value={s} selected={s === filtros.sexo}>{s}</option>)}
+    </select>
+  </div>
+  <div class="filtros__campo">
+    <label for="f-informante">Informante</label>
+    <select id="f-informante" name="informante">
+      <option value="" selected={!filtros.informante}>Todos</option>
+      {INFORMANTES.map((i) => <option value={i} selected={i === filtros.informante}>{i}</option>)}
+    </select>
+  </div>
+  <div class="filtros__campo">
+    <label for="f-version">Instrumento</label>
+    <select id="f-version" name="versionInstrumento">
+      <option value="" selected={!filtros.versionInstrumento}>Todos</option>
+      {instrumentos.map((i) => <option value={i} selected={i === filtros.versionInstrumento}>{i}</option>)}
+      {filtros.versionInstrumento && !instrumentos.includes(filtros.versionInstrumento) && (
+        <option value={filtros.versionInstrumento} selected>{filtros.versionInstrumento}</option>
+      )}
+    </select>
+  </div>
+  <div class="filtros__campo filtros__campo--check">
+    <label><input type="checkbox" name="soloConsentimiento" value="1" checked={filtros.soloConsentimiento} /> Solo con consentimiento</label>
+  </div>
+  <div class="filtros__acciones">
+    <button type="submit" class="boton">Aplicar</button>
+    <a href={ruta} class="boton boton--secundario">Limpiar</a>
+  </div>
+</form>
+
+<style>
+  .filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-2) var(--espacio-3);
+    align-items: end;
+  }
+  .filtros__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+  }
+  .filtros__campo label {
+    color: var(--color-texto-suave);
+  }
+  .filtros__campo--check label {
+    color: var(--color-texto);
+    padding-bottom: 0.3rem;
+  }
+  .filtros input,
+  .filtros select {
+    font: inherit;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    background: var(--color-fondo);
+    color: var(--color-texto);
+    min-width: 6rem;
+  }
+  .filtros input[type="number"] {
+    width: 4.5rem;
+    min-width: 0;
+  }
+  .filtros__acciones {
+    display: flex;
+    gap: var(--espacio-2);
+  }
+</style>

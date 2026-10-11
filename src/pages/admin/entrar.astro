@@ -1,0 +1,60 @@
+---
+import Admin from "@/layouts/Admin.astro";
+import { autenticar, modoAdmin } from "@/lib/admin/proteger";
+import { procesarEntrar } from "@/lib/admin/sesion";
+
+// El formulario envía POST a esta misma página (fuera de /api, sin comprobación de Origin).
+if (Astro.request.method === "POST") return procesarEntrar(Astro.request);
+
+const usuario = await autenticar(Astro.request);
+if (usuario) return Astro.redirect("/admin", 302);
+const modo = modoAdmin();
+const error = Astro.url.searchParams.get("error");
+const volverBruto = Astro.url.searchParams.get("volver") ?? "/admin";
+const volver = /^\/admin(\/[\w\-/?=&%.]*)?$/.test(volverBruto) ? volverBruto : "/admin";
+const MENSAJES: Record<string, string> = {
+  credenciales: "Contraseña incorrecta.",
+  bloqueado: "Demasiados intentos. Espera 15 minutos antes de volver a intentarlo.",
+};
+Astro.response.status = 401;
+---
+
+<Admin titulo="Entrar al panel" sinFiltros activo="entrar">
+  <section class="panel entrar">
+    {modo === "password" ? (
+      <>
+        <p>Acceso de respaldo con contraseña única (modo <code>password</code>). La sesión dura 8 horas.</p>
+        {error && MENSAJES[error] && <p class="aviso" role="alert">{MENSAJES[error]}</p>}
+        <form method="post" action="/admin/entrar" class="entrar__form">
+          <input type="hidden" name="volver" value={volver} />
+          <label for="contrasena">Contraseña</label>
+          <input id="contrasena" name="contrasena" type="password" autocomplete="current-password" required minlength="12" />
+          <button type="submit" class="boton">Entrar</button>
+        </form>
+      </>
+    ) : (
+      <>
+        <p>Este panel está protegido con <strong>Cloudflare Access</strong>. Si ves esta página, tu sesión de Access no es válida o tu correo no está en la lista de personas autorizadas.</p>
+        <p>Pide acceso a <a href="mailto:info@galexbh.dev">info@galexbh.dev</a> o vuelve a <a href="/admin">/admin</a> para iniciar sesión con Access.</p>
+      </>
+    )}
+  </section>
+</Admin>
+
+<style>
+  .entrar {
+    max-width: 28rem;
+  }
+  .entrar__form {
+    display: grid;
+    gap: var(--espacio-2);
+  }
+  .entrar__form input {
+    font: inherit;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    background: var(--color-fondo);
+    color: var(--color-texto);
+  }
+</style>

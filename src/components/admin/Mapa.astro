@@ -1,0 +1,91 @@
+---
+import { claseMapa, ETIQUETAS_CLASE_MAPA, fmtPctIc } from "@/lib/admin/formato";
+import type { FilaGeo } from "@/lib/reportes/geografia";
+/**
+ * Mapa coroplético de Honduras por departamento a partir de public/ilustraciones/honduras.svg
+ * (ids d-01…d-18). Escala fija de 5 clases de % positivo; gris con trama para n < 5 y gris claro
+ * para "sin respuestas". Cada departamento lleva <title> con n, % e IC95.
+ */
+import mapaSvg from "../../../public/ilustraciones/honduras.svg?raw";
+
+interface Props {
+  titulo: string;
+  departamentos: FilaGeo[];
+  /** Qué proporción colorea el mapa. */
+  metrica?: "positivo" | "combinado";
+}
+const { titulo, departamentos, metrica = "positivo" } = Astro.props;
+
+const porCodigo = new Map(departamentos.map((d) => [d.codigo, d]));
+const reglas: string[] = [];
+let svg = mapaSvg.replace(/<title id="hn-titulo">[^<]*<\/title>/, "");
+svg = svg.replace(/<svg /, `<svg class="mapa__svg" `);
+svg = svg.replace(/role="img"/, `role="group"`);
+svg = svg.replace(/aria-labelledby="hn-titulo"/, `aria-label="${titulo}"`);
+svg = svg.replace(
+  /<path id="(d-\d\d)"([^>]*?)\s*\/?>(?:<title>[^<]*<\/title><\/path>)?/g,
+  (_todo, id: string, resto: string) => {
+    const codigo = id.slice(2);
+    const d = porCodigo.get(codigo);
+    const p = d ? d[metrica] : null;
+    const clase = d && p ? claseMapa(p, d.n) : "vacio";
+    reglas.push(
+      `#${id}{fill:${clase === "vacio" ? "var(--viz-vacio)" : clase === "suprimido" ? "url(#mapa-trama)" : `var(--viz-sec-${clase})`}}`,
+    );
+    const texto = !d
+      ? `${codigo}: sin datos`
+      : d.n === 0 && !d.suprimido
+        ? `${d.nombre}: sin respuestas`
+        : d.suprimido
+          ? `${d.nombre}: n < 5 (suprimido)`
+          : `${d.nombre}: n = ${d.n}, ${fmtPctIc(p)}`;
+    return `<path id="${id}"${resto} tabindex="0"><title>${texto}</title></path>`;
+  },
+);
+svg = svg.replace(
+  /(<svg[^>]*>)/,
+  `$1<defs><pattern id="mapa-trama" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--viz-vacio)"/><line x1="0" y1="0" x2="0" y2="7" stroke="var(--viz-trama)" stroke-width="2"/></pattern></defs><style>${reglas.join("")}</style>`,
+);
+const clases = [1, 2, 3, 4, 5] as const;
+---
+
+<figure class="mapa grafico">
+  <figcaption>{titulo}</figcaption>
+  <div class="mapa__lienzo" set:html={svg} />
+  <ul class="leyenda" aria-label="Leyenda del mapa">
+    {clases.map((c) => (
+      <li><span class="leyenda__muestra" style={`background:var(--viz-sec-${c})`}></span>{ETIQUETAS_CLASE_MAPA[c]}</li>
+    ))}
+    <li><span class="leyenda__muestra leyenda__muestra--trama"></span>n &lt; 5 (suprimido)</li>
+    <li><span class="leyenda__muestra" style="background:var(--viz-vacio)"></span>Sin respuestas</li>
+  </ul>
+  <p class="panel__nota">% de cribado {metrica === "combinado" ? "combinado (inatención e hiperactividad)" : "positivo (inatención o hiperactividad)"} entre quienes respondieron; no es prevalencia (muestra autoseleccionada). Cortes fijos para comparar periodos.</p>
+</figure>
+
+<style>
+  .mapa__lienzo :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+    --c-mapa-borde: var(--color-superficie);
+  }
+  .mapa__lienzo :global(path:focus-visible) {
+    outline: none;
+    stroke: var(--color-acento);
+    stroke-width: 3;
+  }
+  .mapa__lienzo :global(path:hover) {
+    stroke: var(--color-texto);
+    stroke-width: 2.5;
+  }
+  .leyenda__muestra--trama {
+    background: repeating-linear-gradient(45deg, var(--viz-vacio) 0 3px, var(--viz-trama) 3px 4px);
+  }
+  .grafico {
+    margin: 0;
+  }
+  .grafico figcaption {
+    font-weight: 600;
+    margin-bottom: var(--espacio-2);
+  }
+</style>

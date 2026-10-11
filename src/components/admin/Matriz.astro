@@ -1,0 +1,105 @@
+---
+/** Matriz/heatmap SVG con escala secuencial de 5 pasos; celdas suprimidas con trama. */
+import Tabla from "./Tabla.astro";
+
+export interface CeldaMatriz {
+  valor: number | null;
+  suprimido?: boolean;
+  texto: string;
+}
+
+interface Props {
+  titulo: string;
+  filas: string[];
+  columnas: string[];
+  /** celdas[filaIdx][colIdx] */
+  celdas: CeldaMatriz[][];
+  max?: number;
+  id?: string;
+}
+const {
+  titulo,
+  filas,
+  columnas,
+  celdas,
+  max: maxProp,
+  id = `matriz-${Math.random().toString(36).slice(2, 8)}`,
+} = Astro.props;
+const max = maxProp ?? Math.max(1, ...celdas.flat().map((c) => c.valor ?? 0));
+const tam = 64;
+const mI = 150;
+const mS = 70;
+const ancho = mI + columnas.length * tam + 8;
+const alto = mS + filas.length * tam + 8;
+function paso(v: number): string {
+  const r = v / max;
+  if (r < 0.2) return "var(--viz-sec-1)";
+  if (r < 0.4) return "var(--viz-sec-2)";
+  if (r < 0.6) return "var(--viz-sec-3)";
+  if (r < 0.8) return "var(--viz-sec-4)";
+  return "var(--viz-sec-5)";
+}
+function tinta(v: number): string {
+  return v / max >= 0.6 ? "var(--viz-sec-1)" : "var(--viz-sec-5)";
+}
+const filasTabla = filas.map((f, i) => {
+  const fila: Record<string, string> = { fila: f };
+  columnas.forEach((_c, j) => {
+    fila[`c${j}`] = celdas[i]?.[j]?.suprimido ? "n < 5" : (celdas[i]?.[j]?.texto ?? "—");
+  });
+  return fila;
+});
+---
+
+<figure class="grafico">
+  <figcaption id={`${id}-t`}>{titulo}</figcaption>
+  <svg class="viz viz--matriz" viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-labelledby={`${id}-t`} style={`max-width:${ancho}px`}>
+    <defs>
+      <pattern id={`${id}-trama`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="var(--viz-trama)" stroke-width="1.5" />
+      </pattern>
+    </defs>
+    {columnas.map((c, j) => (
+      <text class="viz__eje-etq" x={mI + j * tam + tam / 2} y={mS - 10} text-anchor="end" transform={`rotate(-35 ${mI + j * tam + tam / 2} ${mS - 10})`}>{c}</text>
+    ))}
+    {filas.map((f, i) => (
+      <g>
+        <text x={mI - 8} y={mS + i * tam + tam / 2 + 4} text-anchor="end">{f}</text>
+        {columnas.map((c, j) => {
+          const celda = celdas[i]?.[j];
+          const x = mI + j * tam;
+          const y = mS + i * tam;
+          if (!celda || celda.suprimido || celda.valor === null) {
+            return (
+              <g>
+                <title>{f} × {c}: n &lt; 5 (suprimido)</title>
+                <rect x={x + 1} y={y + 1} width={tam - 2} height={tam - 2} fill={`url(#${id}-trama)`} stroke="var(--viz-trama)" rx="4" />
+              </g>
+            );
+          }
+          return (
+            <g>
+              <title>{f} × {c}: {celda.texto}</title>
+              <rect x={x + 1} y={y + 1} width={tam - 2} height={tam - 2} fill={paso(celda.valor)} rx="4" />
+              <text x={x + tam / 2} y={y + tam / 2 + 4} text-anchor="middle" style={`fill:${tinta(celda.valor)}`}>{celda.texto}</text>
+            </g>
+          );
+        })}
+      </g>
+    ))}
+  </svg>
+  <Tabla plegada columnas={[{ clave: "fila", etiqueta: "" }, ...columnas.map((c, j) => ({ clave: `c${j}`, etiqueta: c, tipo: "num" as const }))]} filas={filasTabla} />
+</figure>
+
+<style>
+  .grafico {
+    margin: 0;
+  }
+  .grafico figcaption {
+    font-weight: 600;
+    margin-bottom: var(--espacio-2);
+  }
+  .viz--matriz {
+    width: 100%;
+  }
+</style>

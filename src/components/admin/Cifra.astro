@@ -1,0 +1,54 @@
+---
+/** Tarjeta de cifra (stat tile): un número grande con etiqueta y nota opcional. */
+interface Props {
+  etiqueta: string;
+  valor: string;
+  nota?: string;
+  /** Comparación: texto tipo "+3,2 pt (+25 %)" con signo. */
+  delta?: string | null;
+  deltaSentido?: "sube" | "baja" | "igual";
+}
+const { etiqueta, valor, nota, delta = null, deltaSentido = "igual" } = Astro.props;
+---
+
+<div class="cifra panel">
+  <p class="cifra__etiqueta">{etiqueta}</p>
+  <p class="cifra__valor">{valor}</p>
+  {delta && <p class={`cifra__delta cifra__delta--${deltaSentido}`}>{deltaSentido === "sube" ? "▲ " : deltaSentido === "baja" ? "▼ " : "= "}{delta}</p>}
+  {nota && <p class="cifra__nota">{nota}</p>}
+</div>
+
+<style>
+  .cifra {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .cifra__etiqueta {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-texto-suave);
+  }
+  .cifra__valor {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .cifra__delta {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-texto-suave);
+  }
+  .cifra__delta--sube {
+    color: var(--viz-serie-1);
+  }
+  .cifra__delta--baja {
+    color: var(--viz-serie-2);
+  }
+  .cifra__nota {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-texto-suave);
+  }
+</style>

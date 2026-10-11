@@ -1,0 +1,54 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Cifra from "@/components/admin/Cifra.astro";
+import Lineas from "@/components/admin/Lineas.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtEntero, fmtPct } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+import { type Granularidad, reporteVolumen } from "@/lib/reportes/volumen";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const g = Astro.url.searchParams.get("granularidad");
+const granularidad: Granularidad = g === "semana" || g === "mes" ? g : "dia";
+const datos = await reporteVolumen(env.DB, filtros, granularidad);
+const enlace = (gr: Granularidad) => {
+  const p = new URLSearchParams(Astro.url.searchParams);
+  p.set("granularidad", gr);
+  return `/admin/volumen?${p.toString()}`;
+};
+---
+
+<Admin titulo="Volumen de respuestas" usuario={auth} filtros={filtros} activo="volumen">
+  <section class="rejilla" aria-label="Totales">
+    <Cifra etiqueta="Iniciadas" valor={fmtEntero(datos.totales.total)} />
+    <Cifra etiqueta="Completadas" valor={fmtEntero(datos.totales.completadas)} />
+    <Cifra etiqueta="Abandonadas" valor={fmtEntero(datos.totales.abandonadas)} />
+    <Cifra etiqueta="Completitud" valor={fmtPct(datos.totales.completitud)} />
+  </section>
+  <section class="panel">
+    <p class="panel__nota">
+      Granularidad:
+      {(["dia", "semana", "mes"] as Granularidad[]).map((gr) => (
+        <a href={enlace(gr)} aria-current={gr === granularidad ? "true" : undefined} style={gr === granularidad ? "font-weight:700" : ""}> {gr} </a>
+      ))}
+    </p>
+    <Lineas
+      titulo={`Completadas y abandonadas por ${granularidad}`}
+      series={[
+        { nombre: "Completadas", puntos: datos.series.map((s) => ({ x: s.clave, y: s.completadas.suprimido ? null : s.completadas.n, suprimido: s.completadas.suprimido })) },
+        { nombre: "Abandonadas", puntos: datos.series.map((s) => ({ x: s.clave, y: s.abandonadas.suprimido ? null : s.abandonadas.n, suprimido: s.abandonadas.suprimido })) },
+      ]}
+    />
+  </section>
+  <section class="panel">
+    <Barras
+      titulo="Ítem en el que se abandona el cuestionario (10 más frecuentes)"
+      datos={datos.itemsAbandono.map((a) => ({ etiqueta: a.item, valor: a.n.suprimido ? null : a.n.n, suprimido: a.n.suprimido, detalle: fmtCelda(a.n) }))}
+      nombreValor="Abandonos"
+    />
+  </section>
+</Admin>

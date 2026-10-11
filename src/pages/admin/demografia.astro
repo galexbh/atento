@@ -1,0 +1,60 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Cifra from "@/components/admin/Cifra.astro";
+import Matriz from "@/components/admin/Matriz.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtDecimal, fmtPctIc } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { reporteDemografia } from "@/lib/reportes/demografia";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteDemografia(env.DB, filtros);
+const celdas = d.edades.map((edad) =>
+  d.sexos.map((sexo) => {
+    const c = d.edadPorSexo[edad]?.[sexo];
+    return {
+      valor: c && !c.suprimido ? c.n : null,
+      suprimido: c?.suprimido ?? true,
+      texto: fmtCelda(c),
+    };
+  }),
+);
+---
+
+<Admin titulo="Demografía" usuario={auth} filtros={filtros} activo="demografia">
+  <section class="rejilla" aria-label="Cifras">
+    <Cifra etiqueta="Razón niño:niña entre positivos" valor={d.razonMF === null ? "n < 5" : `${fmtDecimal(d.razonMF, 2)} : 1`} nota="literatura: ~2:1 en muestras comunitarias" />
+  </section>
+  <section class="rejilla rejilla--2">
+    <div class="panel">
+      <Matriz titulo="Respuestas por edad × sexo" filas={d.edades.map((e) => `${e} años`)} columnas={d.sexos} celdas={celdas} />
+    </div>
+    <div class="panel">
+      <Barras titulo="% cribado positivo por edad" unidad="%" max={100} datos={d.porEdad.map((e) => ({ etiqueta: `${e.edad} años`, valor: e.positivo.pct, suprimido: e.positivo.suprimido, detalle: fmtPctIc(e.positivo) }))} nombreValor="% positivo (IC95)" />
+    </div>
+  </section>
+  <section class="rejilla rejilla--2">
+    <div class="panel">
+      <Barras titulo="% cribado positivo por sexo" unidad="%" max={100} datos={d.porSexo.map((s) => ({ etiqueta: s.sexo, valor: s.positivo.pct, suprimido: s.positivo.suprimido, detalle: fmtPctIc(s.positivo) }))} nombreValor="% positivo (IC95)" />
+    </div>
+    <div class="panel">
+      <Barras titulo="Respuestas por informante" datos={d.porInformante.map((i) => ({ etiqueta: i.informante, valor: i.n.suprimido ? null : i.n.n, suprimido: i.n.suprimido }))} nombreValor="n" />
+    </div>
+  </section>
+  <section class="panel">
+    <h2>Tasas por informante</h2>
+    <Tabla
+      columnas={[
+        { clave: "informante", etiqueta: "Informante" },
+        { clave: "n", etiqueta: "n", tipo: "num" },
+        { clave: "positivo", etiqueta: "% positivo (IC95)", tipo: "num" },
+      ]}
+      filas={d.porInformante.map((i) => ({ informante: i.informante, n: fmtCelda(i.n), positivo: fmtPctIc(i.positivo) }))}
+    />
+  </section>
+</Admin>

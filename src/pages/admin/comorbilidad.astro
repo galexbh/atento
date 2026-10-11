@@ -1,0 +1,43 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Matriz from "@/components/admin/Matriz.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtPct } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { reporteComorbilidad } from "@/lib/reportes/comorbilidad";
+import { ETIQUETA_ESCALA } from "@/lib/reportes/comun";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteComorbilidad(env.DB, filtros);
+const nombres = d.escalas.map((e) => ETIQUETA_ESCALA[e]);
+const celdasN = d.escalas.map((a) =>
+  d.escalas.map((b) => {
+    const c = d.matriz[a][b];
+    return { valor: c.suprimido ? null : c.n, suprimido: c.suprimido, texto: fmtCelda(c) };
+  }),
+);
+const celdasPct = d.escalas.map((a) =>
+  d.escalas.map((b) => {
+    const p = d.pct[a][b];
+    return { valor: p.pct, suprimido: p.suprimido, texto: fmtPct(p) };
+  }),
+);
+---
+
+<Admin titulo="Comorbilidad" usuario={auth} filtros={filtros} activo="comorbilidad">
+  <section class="rejilla rejilla--2">
+    <div class="panel">
+      <Matriz titulo={`Co-ocurrencia de positivos (n con fila y columna positivas; diagonal = positivos de la fila). n = ${d.n}`} filas={nombres} columnas={nombres} celdas={celdasN} />
+    </div>
+    <div class="panel">
+      <Matriz titulo="% de positivos en la fila que también son positivos en la columna" filas={nombres} columnas={nombres} celdas={celdasPct} max={100} />
+    </div>
+  </section>
+  <section class="panel">
+    <Barras titulo="Número de subescalas positivas por respuesta" unidad="%" max={100} datos={d.porCantidad.map((c) => ({ etiqueta: `${c.cantidad} positivas`, valor: c.pct.pct, suprimido: c.pct.suprimido, detalle: `${fmtPct(c.pct)} · n = ${fmtCelda(c.n)}` }))} nombreValor="%" />
+  </section>
+</Admin>

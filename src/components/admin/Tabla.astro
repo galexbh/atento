@@ -1,0 +1,61 @@
+---
+/** Tabla accesible. Las celdas llegan ya formateadas; "n < 5" se marca como suprimida. */
+import { SUPRIMIDO } from "@/lib/admin/formato";
+
+export interface Columna {
+  clave: string;
+  etiqueta: string;
+  /** "num" alinea a la derecha con cifras tabulares. */
+  tipo?: "texto" | "num";
+}
+
+interface Props {
+  titulo?: string;
+  columnas: Columna[];
+  filas: Record<string, string | number | null | undefined>[];
+  vacio?: string;
+  /** Si se indica, la tabla queda plegada dentro de <details> (vista de datos de un gráfico). */
+  plegada?: boolean;
+}
+const {
+  titulo,
+  columnas,
+  filas,
+  vacio = "Sin datos para los filtros elegidos.",
+  plegada = false,
+} = Astro.props;
+const Contenedor = plegada ? "details" : "div";
+---
+
+<Contenedor class={plegada ? "tabla-datos" : "tabla-bloque"}>
+  {plegada && <summary>Ver datos en tabla</summary>}
+  {filas.length === 0 ? (
+    <p class="panel__nota">{vacio}</p>
+  ) : (
+    <div class="tabla-contenedor" tabindex="0" role="region" aria-label={titulo ?? "Tabla de datos (desplazable)"}>
+      <table class="tabla">
+        {titulo && <caption>{titulo}</caption>}
+        <thead>
+          <tr>
+            {columnas.map((c) => <th scope="col" class={c.tipo === "num" ? "num" : undefined}>{c.etiqueta}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((f) => (
+            <tr>
+              {columnas.map((c) => {
+                const v = f[c.clave];
+                const texto = v === null || v === undefined ? "—" : String(v);
+                return (
+                  <td class={[c.tipo === "num" ? "num" : "", texto === SUPRIMIDO ? "suprimido" : ""].join(" ").trim() || undefined}>
+                    {texto}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</Contenedor>

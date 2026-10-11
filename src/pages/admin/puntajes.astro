@@ -1,0 +1,67 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtDecimal, fmtEntero, fmtPct, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { ETIQUETA_ESCALA } from "@/lib/reportes/comun";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+import { reportePuntajes } from "@/lib/reportes/puntajes";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reportePuntajes(env.DB, filtros);
+const filasDesc = d.escalas.map((e) => {
+  const s = e.descriptivos;
+  return {
+    escala: ETIQUETA_ESCALA[e.escala],
+    n: e.suprimido ? SUPRIMIDO : fmtEntero(e.n),
+    media: s ? fmtDecimal(s.media) : SUPRIMIDO,
+    de: s ? fmtDecimal(s.de) : SUPRIMIDO,
+    p10: s ? fmtDecimal(s.p10, 1) : SUPRIMIDO,
+    p25: s ? fmtDecimal(s.p25, 1) : SUPRIMIDO,
+    p50: s ? fmtDecimal(s.p50, 1) : SUPRIMIDO,
+    p75: s ? fmtDecimal(s.p75, 1) : SUPRIMIDO,
+    p90: s ? fmtDecimal(s.p90, 1) : SUPRIMIDO,
+    rango: s ? `${s.min}–${s.max}` : SUPRIMIDO,
+  };
+});
+---
+
+<Admin titulo="Puntajes" usuario={auth} filtros={filtros} activo="puntajes">
+  <section class="panel">
+    <h2>Descriptivos por subescala</h2>
+    <Tabla
+      columnas={[
+        { clave: "escala", etiqueta: "Subescala" },
+        { clave: "n", etiqueta: "n", tipo: "num" },
+        { clave: "media", etiqueta: "Media", tipo: "num" },
+        { clave: "de", etiqueta: "DE", tipo: "num" },
+        { clave: "p10", etiqueta: "P10", tipo: "num" },
+        { clave: "p25", etiqueta: "P25", tipo: "num" },
+        { clave: "p50", etiqueta: "Mediana", tipo: "num" },
+        { clave: "p75", etiqueta: "P75", tipo: "num" },
+        { clave: "p90", etiqueta: "P90", tipo: "num" },
+        { clave: "rango", etiqueta: "Mín–máx", tipo: "num" },
+      ]}
+      filas={filasDesc}
+    />
+  </section>
+  <section class="panel">
+    <Barras titulo="% por nivel orientativo de Atento" unidad="%" max={100} datos={d.niveles.map((n) => ({ etiqueta: n.nivel, valor: n.pct.pct, suprimido: n.pct.suprimido, detalle: `${fmtPct(n.pct)} · n = ${fmtCelda(n.n)}` }))} nombreValor="%" />
+  </section>
+  <section class="rejilla rejilla--2">
+    {d.escalas.map((e) => (
+      <div class="panel">
+        <Barras
+          orientacion="vertical"
+          titulo={`Histograma · ${ETIQUETA_ESCALA[e.escala]}`}
+          datos={e.histograma.map((b) => ({ etiqueta: `${b.desde}–${b.hasta}`, valor: b.celda.suprimido ? null : b.celda.n, suprimido: b.celda.suprimido }))}
+          nombreValor="n"
+        />
+      </div>
+    ))}
+  </section>
+</Admin>

@@ -1,0 +1,77 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtDecimal, fmtEntero, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { ETIQUETA_ESCALA } from "@/lib/reportes/comun";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+import { reportePsicometria } from "@/lib/reportes/psicometria";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reportePsicometria(env.DB, filtros);
+const f3 = (v: number | null) => (v === null ? SUPRIMIDO : fmtDecimal(v, 3));
+---
+
+<Admin titulo="Psicometría de ítems" usuario={auth} filtros={filtros} activo="psicometria">
+  <p class="aviso">Alfa de Cronbach y correlación ítem-total corregida se calculan sobre casos completos de cada subescala. Valores orientativos: alfa ≥ 0,70 aceptable; correlación ítem-total ≥ 0,30 adecuada. Esto no valida clínicamente el instrumento.</p>
+  {d.instrumentos.map((inst) => (
+    <section class="panel">
+      <h2>{inst.id}</h2>
+      <Tabla
+        titulo="Consistencia interna por subescala"
+        columnas={[
+          { clave: "escala", etiqueta: "Subescala" },
+          { clave: "k", etiqueta: "Ítems", tipo: "num" },
+          { clave: "n", etiqueta: "n (casos completos)", tipo: "num" },
+          { clave: "alfa", etiqueta: "Alfa de Cronbach", tipo: "num" },
+        ]}
+        filas={inst.escalas.map((e) => ({ escala: ETIQUETA_ESCALA[e.escala], k: e.k, n: e.n === 0 ? SUPRIMIDO : fmtEntero(e.n), alfa: f3(e.alfa) }))}
+      />
+      <Tabla
+        titulo="Por ítem"
+        columnas={[
+          { clave: "id", etiqueta: "Ítem" },
+          { clave: "escala", etiqueta: "Subescala" },
+          { clave: "dsm", etiqueta: "DSM-5" },
+          { clave: "texto", etiqueta: "Enunciado" },
+          { clave: "n", etiqueta: "n", tipo: "num" },
+          { clave: "media", etiqueta: "Media", tipo: "num" },
+          { clave: "respaldo", etiqueta: "% respaldo", tipo: "num" },
+          { clave: "rit", etiqueta: "r ítem-total", tipo: "num" },
+          { clave: "alfaSin", etiqueta: "Alfa sin ítem", tipo: "num" },
+        ]}
+        filas={inst.items.map((i) => ({
+          id: i.id,
+          escala: ETIQUETA_ESCALA[i.escala],
+          dsm: i.criterioDSM ?? "",
+          texto: i.texto,
+          n: i.suprimido ? SUPRIMIDO : fmtEntero(i.n),
+          media: i.media === null ? SUPRIMIDO : fmtDecimal(i.media),
+          respaldo: i.tasaRespaldo === null ? SUPRIMIDO : `${fmtDecimal(i.tasaRespaldo, 1)} %`,
+          rit: f3(i.corrItemTotal),
+          alfaSin: f3(i.alfaSinItem),
+        }))}
+      />
+    </section>
+  ))}
+  <section class="panel">
+    <h2>Atento vs Vanderbilt por criterio DSM-5</h2>
+    <p class="panel__nota">Correlación de Pearson entre el ítem de Atento y el de Vanderbilt del mismo criterio, en respuestas que contienen ambos.</p>
+    <Barras titulo="Correlación por par (A ↔ V)" max={1} datos={d.paresDSM.map((p) => ({ etiqueta: `${p.criterioDSM} ${p.itemAtento}↔${p.itemVanderbilt}`, valor: p.correlacion, suprimido: p.suprimido, detalle: `r = ${f3(p.correlacion)} (n = ${p.n})` }))} nombreValor="r" />
+    <Tabla
+      columnas={[
+        { clave: "dsm", etiqueta: "Criterio" },
+        { clave: "par", etiqueta: "Par" },
+        { clave: "n", etiqueta: "n", tipo: "num" },
+        { clave: "r", etiqueta: "r", tipo: "num" },
+        { clave: "mA", etiqueta: "Media Atento", tipo: "num" },
+        { clave: "mV", etiqueta: "Media Vanderbilt", tipo: "num" },
+      ]}
+      filas={d.paresDSM.map((p) => ({ dsm: p.criterioDSM, par: `${p.itemAtento} ↔ ${p.itemVanderbilt}`, n: p.suprimido ? SUPRIMIDO : fmtEntero(p.n), r: f3(p.correlacion), mA: p.mediaAtento === null ? SUPRIMIDO : fmtDecimal(p.mediaAtento), mV: p.mediaVanderbilt === null ? SUPRIMIDO : fmtDecimal(p.mediaVanderbilt) }))}
+    />
+  </section>
+</Admin>

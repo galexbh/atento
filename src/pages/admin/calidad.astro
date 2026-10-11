@@ -1,0 +1,26 @@
+---
+import { env } from "cloudflare:workers";
+import Cifra from "@/components/admin/Cifra.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtEntero, fmtPct } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { reporteCalidad } from "@/lib/reportes/calidad";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteCalidad(env.DB, filtros);
+const seg = (v: number | null) => (v === null ? "n < 5" : `${fmtEntero(v)} s`);
+---
+
+<Admin titulo="Calidad de datos" usuario={auth} filtros={filtros} activo="calidad">
+  <p class="panel__nota">Señales para limpiar la muestra antes de un análisis. No se eliminan filas automáticamente; marca los criterios en la metodología del análisis.</p>
+  <section class="rejilla" aria-label="Indicadores de calidad">
+    <Cifra etiqueta="Respuestas completadas analizadas" valor={fmtEntero(d.n)} />
+    <Cifra etiqueta="Patrón «todo igual» (ítems de frecuencia)" valor={fmtPct(d.todoIgual)} nota="todos los ítems con el mismo valor" />
+    <Cifra etiqueta="Llenado en menos de 120 s" valor={fmtPct(d.rapidas)} nota={`sin duración registrada: ${fmtCelda(d.sinDuracion)}`} />
+    <Cifra etiqueta="Duplicados sospechosos" valor={fmtPct(d.duplicados.pct)} nota={`grupos: ${fmtCelda(d.duplicados.grupos)} · filas: ${fmtCelda(d.duplicados.filas)} (mismo día, municipio, edad, sexo e ítems)`} />
+    <Cifra etiqueta="Duración de llenado (P25 / mediana / P75)" valor={seg(d.duracion.p50)} nota={`${seg(d.duracion.p25)} / ${seg(d.duracion.p50)} / ${seg(d.duracion.p75)}`} />
+  </section>
+</Admin>

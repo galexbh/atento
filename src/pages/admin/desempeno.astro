@@ -1,0 +1,54 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Cifra from "@/components/admin/Cifra.astro";
+import Matriz from "@/components/admin/Matriz.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtDecimal, fmtEntero, fmtPct, fmtPctIc, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { reporteDesempeno } from "@/lib/reportes/desempeno";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteDesempeno(env.DB, filtros);
+const valores = [1, 2, 3, 4, 5];
+const celdas = d.items.map((i) =>
+  valores.map((v) => {
+    const c = i.distribucion[v];
+    return {
+      valor: c && !c.suprimido ? c.n : null,
+      suprimido: c?.suprimido ?? true,
+      texto: fmtCelda(c),
+    };
+  }),
+);
+---
+
+<Admin titulo="Desempeño" usuario={auth} filtros={filtros} activo="desempeno">
+  <section class="rejilla" aria-label="Relación con síntomas">
+    <Cifra etiqueta="% con desempeño positivo entre quienes tienen síntomas positivos" valor={fmtPct(d.relacion.conSintomas)} nota={fmtPctIc(d.relacion.conSintomas)} />
+    <Cifra etiqueta="% con desempeño positivo sin síntomas positivos" valor={fmtPct(d.relacion.sinSintomas)} nota={fmtPctIc(d.relacion.sinSintomas)} />
+  </section>
+  <section class="panel">
+    <Matriz titulo="Distribución de respuestas 1 (excelente) a 5 (muchos problemas) por ítem" filas={d.items.map((i) => i.id)} columnas={valores.map((v) => String(v))} celdas={celdas} />
+  </section>
+  <section class="panel">
+    <Barras titulo="% con problemas (4 o 5) por ítem" unidad="%" max={100} datos={d.items.map((i) => ({ etiqueta: `${i.id} ${i.texto}`, valor: i.conProblemas.pct, suprimido: i.conProblemas.suprimido, detalle: fmtPctIc(i.conProblemas) }))} nombreValor="% con problemas" />
+  </section>
+  <section class="panel">
+    <h2>Detalle por ítem</h2>
+    <Tabla
+      columnas={[
+        { clave: "id", etiqueta: "Ítem" },
+        { clave: "texto", etiqueta: "Enunciado" },
+        { clave: "n", etiqueta: "n", tipo: "num" },
+        { clave: "media", etiqueta: "Media (1–5)", tipo: "num" },
+        { clave: "problemas", etiqueta: "% con problemas (IC95)", tipo: "num" },
+      ]}
+      filas={d.items.map((i) => ({ id: i.id, texto: i.texto, n: i.suprimido ? SUPRIMIDO : fmtEntero(i.n), media: i.media === null ? SUPRIMIDO : fmtDecimal(i.media), problemas: fmtPctIc(i.conProblemas) }))}
+    />
+  </section>
+</Admin>

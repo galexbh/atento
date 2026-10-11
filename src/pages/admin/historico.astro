@@ -1,0 +1,61 @@
+---
+import { env } from "cloudflare:workers";
+import Lineas from "@/components/admin/Lineas.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtPctIc, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina } from "@/lib/admin/proteger";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+import { reporteHistorico } from "@/lib/reportes/historico";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteHistorico(env.DB, filtros);
+const fmtDif = (
+  dif: { absoluta: number | null; relativa: number | null } | undefined,
+  unidad: string,
+) =>
+  !dif || dif.absoluta === null
+    ? "—"
+    : `${dif.absoluta > 0 ? "+" : ""}${dif.absoluta}${unidad}${dif.relativa === null ? "" : ` (${dif.relativa > 0 ? "+" : ""}${dif.relativa} %)`}`;
+const comp = d.comparacion?.filas[0]?.diferencias;
+---
+
+<Admin titulo="Histórico" usuario={auth} filtros={filtros} activo="historico">
+  <p class="panel__nota">El periodo seleccionado se ignora aquí (se muestra toda la serie); el resto de filtros sí aplica. Elige «Comparar con» otro año para fijar la comparación anual.</p>
+  <section class="panel">
+    <Lineas titulo="Respuestas completadas por mes" series={[{ nombre: "n", puntos: d.mensual.map((m) => ({ x: m.clave, y: m.n.suprimido ? null : m.n.n, suprimido: m.n.suprimido })) }]} />
+  </section>
+  <section class="panel">
+    <Lineas titulo="% cribado positivo por mes" unidad="%" max={100} series={[{ nombre: "% positivo", puntos: d.mensual.map((m) => ({ x: m.clave, y: m.positivo.pct, suprimido: m.positivo.suprimido })) }]} />
+  </section>
+  <section class="panel">
+    <h2>Por año</h2>
+    <Tabla
+      columnas={[
+        { clave: "anio", etiqueta: "Año" },
+        { clave: "n", etiqueta: "n", tipo: "num" },
+        { clave: "positivo", etiqueta: "% positivo (IC95)", tipo: "num" },
+      ]}
+      filas={d.anual.map((a) => ({ anio: a.clave, n: fmtCelda(a.n), positivo: fmtPctIc(a.positivo) }))}
+    />
+    {d.comparacion ? (
+      <Tabla
+        titulo={`Comparación ${d.comparacion.periodoA} → ${d.comparacion.periodoB}`}
+        columnas={[
+          { clave: "indicador", etiqueta: "Indicador" },
+          { clave: "a", etiqueta: d.comparacion.periodoA, tipo: "num" },
+          { clave: "b", etiqueta: d.comparacion.periodoB, tipo: "num" },
+          { clave: "dif", etiqueta: "Diferencia (abs., rel.)", tipo: "num" },
+        ]}
+        filas={[
+          { indicador: "n", a: comp?.n?.a ?? SUPRIMIDO, b: comp?.n?.b ?? SUPRIMIDO, dif: fmtDif(comp?.n, "") },
+          { indicador: "% positivo", a: comp?.positivo?.a === null || comp?.positivo?.a === undefined ? SUPRIMIDO : `${comp.positivo.a} %`, b: comp?.positivo?.b === null || comp?.positivo?.b === undefined ? SUPRIMIDO : `${comp.positivo.b} %`, dif: fmtDif(comp?.positivo, " pt") },
+        ]}
+      />
+    ) : (
+      <p class="panel__nota">La comparación entre años aparecerá cuando haya datos de dos años (p. ej. 2026 vs 2027).</p>
+    )}
+  </section>
+</Admin>
