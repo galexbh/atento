@@ -33,6 +33,8 @@ For the first version we would like to use the **NICHQ Vanderbilt Assessment Sca
 
 3. **Publication of aggregated statistics.** Publishing anonymous, aggregated results derived from the Vanderbilt scores (e.g., percentage of screenings above threshold by municipality and year, with small-cell suppression), on the website and in academic publications, always citing NICHQ/AAP as the source of the instrument.
 
+4. **Spanish-language version.** The Spanish parent form we were able to locate online (hosted by a U.S. medical school) appears to be the Spanish translation included in the AAP toolkit, 2nd edition (© 2012 AAP), with 54 items; the 2002 first-edition English form has 55. Could you confirm which Spanish version, if any, is covered by the free-with-credit terms? If no first-edition Spanish version exists, we would prepare our own Spanish translation of the first-edition English items, reviewed by a Honduran clinician, and credit NICHQ as the source of the original scale. Please tell us whether that is acceptable.
+
 If any of these uses requires a formal license, a different attribution text, or should instead be directed to the American Academy of Pediatrics, please let me know and I will follow the indicated process. I am also happy to share the site for review before launch and to send a copy of any resulting publication.
 
 Thank you for making the first edition freely available; it is the reason a project like this can exist in a low-resource setting.
@@ -63,6 +65,8 @@ Para la primera versión queremos usar la **NICHQ Vanderbilt Assessment Scale �
 
 3. **Publicación de estadísticas agregadas.** Publicar resultados anónimos agregados derivados de los puntajes Vanderbilt (p. ej., porcentaje de cribados sobre el umbral por municipio y año, con supresión de celdas pequeñas), en el sitio y en publicaciones académicas, citando siempre a NICHQ/AAP como fuente del instrumento.
 
+4. **Versión en español.** El formulario en español que pudimos localizar en línea (alojado por una facultad de medicina de EE. UU.) parece ser la traducción incluida en el toolkit de la AAP, 2.ª edición (© 2012 AAP), con 54 ítems; el formulario en inglés de la 1.ª edición (2002) tiene 55. ¿Podrían confirmar qué versión en español, si alguna, está cubierta por los términos "gratis con crédito"? Si no existe versión en español de la 1.ª edición, prepararíamos nuestra propia traducción de los ítems en inglés de la 1.ª edición, revisada por un clínico hondureño, acreditando a NICHQ como fuente de la escala original. Agradeceríamos saber si eso es aceptable.
+
 Si alguno de estos usos requiere licencia formal, otro texto de atribución o debe dirigirse a la AAP, indíquenlo y seguiré el proceso. Puedo compartir el sitio para revisión antes del lanzamiento y enviar copia de cualquier publicación resultante.
 
 Gracias por mantener la primera edición gratuita; es lo que hace posible un proyecto así en un entorno de bajos recursos.
@@ -77,6 +81,7 @@ Gabriel – Atento – info@galexbh.dev
 | Escenario | Acción |
 |---|---|
 | **NICHQ/AAP niega la administración electrónica** | Retirar los 18 ítems Vanderbilt del flujo web y sustituirlos por un instrumento de dominio público o con licencia abierta. Opciones a evaluar con el asesor clínico: (a) **SNAP-IV** (Swanson, Nolan y Pelham; de uso libre y con versión en español ampliamente usada en Latinoamérica; verificar términos en la fuente original antes de adoptar), (b) **ADHD Rating Scale-IV/5** (DuPaul; requiere licencia, probablemente de pago; descartar salvo acuerdo), (c) un instrumento propio Atento basado directamente en los 18 criterios sintomáticos del DSM-5 redactados en lenguaje nuevo (los criterios diagnósticos como tales no son propiedad de NICHQ; la redacción sí debe ser original) y validado en el estudio con UNAH. Mientras tanto, el sitio puede seguir enlazando al PDF oficial de NICHQ para que las familias lo impriman y lo lleven a consulta. |
+| **La versión en español disponible es de la 2.ª edición (de pago)** | Traducir al español los 55 ítems en inglés de la 1.ª edición con revisión del asesor clínico y marcar la versión como `vanderbilt-padres-es-1.0` (traducción Atento); la redacción resultante será casi idéntica a la de 2012, pero la fuente citada será la 1.ª edición gratuita. Documentar en metodología. |
 | **Aceptan la administración pero no el intercalado** | Mostrar los ítems Atento en una sección separada y posterior, con encabezado propio, en lugar de intercalarlos. Cambio solo de interfaz; la puntuación ya está separada. |
 | **Aceptan uso pero no publicación de estadísticas** | Publicar únicamente estadísticas derivadas de los ítems Atento y de variables no Vanderbilt (participación por municipio, edad, sexo), y reservar los datos Vanderbilt para el estudio académico bajo convenio. |
 | **Exigen texto de atribución específico o licencia escrita** | Adoptarlo tal cual; guardar el correo en `docs/` como evidencia de permiso y referenciarlo en la página de Metodología. |

@@ -156,7 +156,7 @@ Por eso Atento:
 
 | Instrumento | Edad | Informante | Ítems | Licencia / uso electrónico | Validación en español / Latinoamérica | Decisión Atento |
 |---|---|---|---|---|---|---|
-| **Vanderbilt NICHQ 1ª ed. (2002), padres** | 6–12 | Padres | 55 (18 síntomas + 8 oposición + 14 conducta + 7 ansiedad/depresión + 8 desempeño) | Gratuita con crédito a NICHQ; versión española oficial disponible (p. ej. PDF de Tulane). | Traducción oficial al español (EE. UU.). **No encontramos validación psicométrica publicada de la versión padres en México, Colombia ni Centroamérica.** Chile: estudio psicométrico 2024 de la **versión docente** (353 estudiantes, Biobío, UCSC). | **Ancla de v1.** |
+| **Vanderbilt NICHQ 1ª ed. (2002), padres** | 6–12 | Padres | 55 (18 síntomas + 8 oposición + 14 conducta + 7 ansiedad/depresión + 8 desempeño) | Gratuita con crédito a NICHQ (1ª ed.). **Advertencia:** el único PDF en español localizado (Tulane, 54 ítems) es la traducción del toolkit AAP 2ª ed. © 2012, que es de pago; la cobertura de esa traducción por los términos gratuitos está pendiente de confirmar con NICHQ (ver `docs/04-correo-nichq.md`). | Traducción oficial al español (EE. UU.). **No encontramos validación psicométrica publicada de la versión padres en México, Colombia ni Centroamérica.** Chile: estudio psicométrico 2024 de la **versión docente** (353 estudiantes, Biobío, UCSC). | **Ancla de v1.** |
 | Vanderbilt NICHQ, docente | 6–12 | Docente | 43 | Igual que padres. | Chile (docente, 2024). | Fase 2 (invitación al docente). |
 | SNAP-IV (Swanson) | 6–18 | Padres/docente | 26 (versión corta) o 90 | © Swanson; reproducción electrónica requiere permiso. | Costa Rica (Weiss et al., 425 niños; padres y docentes). España (n = 7,263; sens. 82.3 %, esp. 82.4 % vs. impresión pediátrica). Es el instrumento con **mejor evidencia regional**. | Descartado por licencia. Útil como referencia de calibración. |
 | SDQ (Goodman) | 2–17 | Padres/docente/joven | 25 | Licencia de Youthinmind obligatoria para uso electrónico. | Amplia validación en español (España, Chile, Colombia, Perú). | Descartado por licencia en v1. |
@@ -173,7 +173,7 @@ Por eso Atento:
 
 ### 4.1 Qué hace v1
 
-1. Aplica la **Vanderbilt padres 1ª ed. en español** completa (55 ítems), con crédito a NICHQ y sin modificar su texto.
+1. Aplica la **Vanderbilt padres 1ª ed. en español** completa (54 ítems en la versión en español localizada; 55 en la inglesa: falta "rendimiento escolar general"), con crédito a NICHQ y sin modificar su texto.
 2. Intercala **18 ítems propios "Atento"** (A01–A18), uno por criterio DSM-5, redactados en español hondureño claro, para calibrarlos contra Vanderbilt. En v1 **no afectan el resultado** que ve la familia; solo se guardan para análisis.
 3. Añade **8 ítems propios de desempeño** (escala 1–5) para la misma calibración.
 4. Puntúa de forma **determinista** con las reglas publicadas de Vanderbilt (ver `02-instrumento/puntuacion.md`). Sin IA en producción.
@@ -222,7 +222,7 @@ Lista concreta, en orden de prioridad:
 - Mulraney M, Arrondo G, et al. Systematic review and meta-analysis: screening tools for ADHD in children and adolescents. *J Am Acad Child Adolesc Psychiatry*. 2022;61(8):982–996. https://doi.org/10.1016/j.jaac.2021.11.031
 - Wolraich ML, et al. Clinical Practice Guideline for the Diagnosis, Evaluation, and Treatment of ADHD in Children and Adolescents (AAP). *Pediatrics*. 2019;144(4):e20192528. https://doi.org/10.1542/peds.2019-2528
 - AAFP. Attention-Deficit/Hyperactivity Disorder: Screening and Evaluation (tabla de precisión de escalas). *Am Fam Physician*. 2019. https://www.aafp.org/pubs/afp/issues/2019/0601/p712.html
-- NICHQ Vanderbilt Assessment Scale, padres, español (1ª ed.). https://medicine.tulane.edu/sites/default/files/NICHQ%20Vanderbilt%20Assessment%20Scale_Parent_Spanish.pdf
+- NICHQ Vanderbilt Assessment Scale, padres, español (traducción del toolkit AAP 2ª ed., 2012; ítems 1–47 idénticos a la 1ª ed.). https://medicine.tulane.edu/sites/default/files/NICHQ%20Vanderbilt%20Assessment%20Scale_Parent_Spanish.pdf
 - NICHQ. Vanderbilt Assessment Scales (página oficial). https://www.nichq.org/resource/nichq-vanderbilt-assessment-scales
 - Weiss MD, et al. Estudio de prevalencia y tamizaje con SNAP-IV en Costa Rica (425 niños, 5–13 años). PubMed PMID 22432094. https://pubmed.ncbi.nlm.nih.gov/22432094/ — **cita completa por verificar**.
 - Estudio español SNAP-IV vs impresión clínica (n = 7,263). *Actas Esp Psiquiatr*. https://actaspsiquiatria.es/index.php/actas/article/download/743/1150/1173 — **autores y año por verificar**.
