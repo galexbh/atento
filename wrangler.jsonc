@@ -36,14 +36,14 @@
     {
       "binding": "DB",
       "database_name": "atento-db",
-      "database_id": "TODO",
+      "database_id": "3bafbd55-2cd9-433e-bc12-f62c65e9df99",
       "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "TODO"
+      "id": "51dba10d3cc74083a5b4fa90dc655186"
     }
   ],
   "vars": {
@@ -71,14 +71,14 @@
         {
           "binding": "DB",
           "database_name": "atento-db-preview",
-          "database_id": "TODO",
+          "database_id": "31f13fa4-ed16-4e2e-9959-2e9749ca85db",
           "migrations_dir": "migrations"
         }
       ],
       "kv_namespaces": [
         {
           "binding": "CACHE",
-          "id": "TODO"
+          "id": "6130081c0253450593d30af05c8dc1e0"
         }
       ],
       "vars": {
