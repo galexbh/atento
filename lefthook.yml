@@ -1,0 +1,11 @@
+# Hooks de git gestionados por lefthook (se instalan con `pnpm install` via script "prepare").
+pre-commit:
+  commands:
+    biome:
+      run: pnpm exec biome check --staged --no-errors-on-unmatched --write
+      stage_fixed: true
+
+pre-push:
+  commands:
+    test:
+      run: pnpm test

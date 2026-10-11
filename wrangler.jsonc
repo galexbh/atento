@@ -1,0 +1,103 @@
+// Configuración de Cloudflare Workers para Atento.
+//
+// Recursos que debe crear el administrador de la cuenta (una sola vez) y cuyos IDs van abajo:
+//
+//   # Base de datos D1 (producción y preview)
+//   pnpm exec wrangler d1 create atento-db            -> pegar database_id en d1_databases (raíz)
+//   pnpm exec wrangler d1 create atento-db-preview    -> pegar database_id en env.preview.d1_databases
+//
+//   # KV para caché (producción y preview)
+//   pnpm exec wrangler kv namespace create CACHE                  -> id en kv_namespaces (raíz)
+//   pnpm exec wrangler kv namespace create CACHE --env preview    -> id en env.preview.kv_namespaces
+//
+//   # Secreto de Turnstile (nunca va en este archivo ni en vars)
+//   pnpm exec wrangler secret put TURNSTILE_SECRET
+//   pnpm exec wrangler secret put TURNSTILE_SECRET --env preview
+//
+//   # Trazas OpenTelemetry: crear en el panel un destino de tipo "Traces" llamado "otel"
+//   (Observability > Destinations) con el endpoint OTLP del colector; el nombre debe coincidir con
+//   observability.traces.destinations. Ver
+//   https://developers.cloudflare.com/workers/observability/exporting-opentelemetry-data/
+//
+// En local no hace falta nada de esto: `astro dev` y `wrangler dev` usan D1/KV simulados en
+// .wrangler/state (aplica el esquema con `pnpm db:migrate:local`) y leen .dev.vars.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "atento",
+  // Entrada propia: envuelve el handler de Astro y añade el handler `scheduled` para los crons.
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "atento-db",
+      "database_id": "TODO",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "TODO"
+    }
+  ],
+  "vars": {
+    "SITE_URL": "https://atento.galexbh.dev",
+    "ENTORNO": "produccion"
+  },
+  "routes": [{ "pattern": "atento.galexbh.dev", "custom_domain": true }],
+  "triggers": {
+    // Recalcula agregados cada día a las 03:00 UTC (21:00 hora de Honduras).
+    "crons": ["0 3 * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true,
+      // No almacenar trazas en Cloudflare; solo exportarlas al destino OTLP configurado.
+      "persist": false,
+      "destinations": ["otel"],
+      "head_sampling_rate": 1
+    }
+  },
+  "env": {
+    "preview": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "atento-db-preview",
+          "database_id": "TODO",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE",
+          "id": "TODO"
+        }
+      ],
+      "vars": {
+        "SITE_URL": "https://atento-preview.galexbh.dev",
+        "ENTORNO": "preview"
+      },
+      "routes": [{ "pattern": "atento-preview.galexbh.dev", "custom_domain": true }],
+      "triggers": {
+        "crons": ["0 3 * * *"]
+      },
+      "observability": {
+        "enabled": true,
+        "traces": {
+          "enabled": true,
+          "persist": false,
+          "destinations": ["otel"],
+          "head_sampling_rate": 1
+        }
+      }
+    }
+  }
+}

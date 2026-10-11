@@ -1,0 +1,52 @@
+---
+import "@/styles/global.css";
+
+interface Props {
+  titulo: string;
+  descripcion: string;
+  /** Ruta canónica (p. ej. "/metodologia"). Por defecto, la URL actual. */
+  canonical?: string;
+}
+
+const { titulo, descripcion, canonical } = Astro.props;
+const sitio = Astro.site ?? new URL("https://atento.galexbh.dev");
+const urlCanonica = new URL(canonical ?? Astro.url.pathname, sitio).href;
+const nonce = Astro.locals.nonce;
+---
+
+<!doctype html>
+<html lang="es-HN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descripcion} />
+    <link rel="canonical" href={urlCanonica} />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:url" content={urlCanonica} />
+    <meta property="og:locale" content="es_HN" />
+    <meta name="csp-nonce" content={nonce} />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="salto-contenido" href="#contenido">Ir al contenido</a>
+    <main id="contenido">
+      <slot />
+    </main>
+    <footer class="pie">
+      <div class="pie__contenido">
+        <ul>
+          <li><a href="/legal/terminos">Términos de uso</a></li>
+          <li><a href="/legal/privacidad">Privacidad</a></li>
+          <li><a href="/metodologia">Metodología</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+        </ul>
+        <p>
+          Atento es una herramienta comunitaria de cribado, no de diagnóstico. Escríbenos a{" "}
+          <a href="mailto:info@galexbh.dev">info@galexbh.dev</a>.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

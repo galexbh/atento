@@ -1,0 +1,4 @@
+# Copia este archivo a .dev.vars (ignorado por git) para desarrollo local.
+# Clave secreta de Cloudflare Turnstile. Para pruebas locales puede usarse la clave de prueba
+# "1x0000000000000000000000000000000AA" (siempre pasa).
+TURNSTILE_SECRET=

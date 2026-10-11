@@ -1,0 +1,210 @@
+{
+  "id": "atento-0.1",
+  "nombre": "Cuestionario Atento para madres, padres y cuidadores (borrador)",
+  "version": "0.1",
+  "fecha": "2026-10-11",
+  "informante": "padres",
+  "creditos": "Redacción propia del proyecto Atento, basada en los 18 criterios A1 y A2 del DSM-5 para TDAH. Borrador pendiente de revisión clínica. No reproduce la redacción de Vanderbilt ni de SNAP-IV.",
+  "traduccionProvisional": true,
+  "notas": [
+    "Cada ítem parafrasea un criterio DSM-5 en español claro de Honduras para personas con baja alfabetización: frases cortas y un ejemplo concreto de la casa o la escuela.",
+    "Los ejemplos no forman parte del enunciado puntuable; sirven solo de apoyo a la comprensión.",
+    "Las opciones de respuesta y las reglas de puntuación son provisionales (copiadas de Vanderbilt) hasta que exista validación propia.",
+    "No incluye ítems de desempeño; si se usa solo este instrumento, el nivel de riesgo no podrá alcanzar 'alto' (requiere desempeño positivo)."
+  ],
+  "opcionesFrecuencia": [
+    { "valor": 0, "etiqueta": "Nunca" },
+    { "valor": 1, "etiqueta": "De vez en cuando" },
+    { "valor": 2, "etiqueta": "Seguido" },
+    { "valor": 3, "etiqueta": "Casi siempre" }
+  ],
+  "opcionesDesempeno": [
+    { "valor": 1, "etiqueta": "Excelente" },
+    { "valor": 2, "etiqueta": "Bien" },
+    { "valor": 3, "etiqueta": "Regular" },
+    { "valor": 4, "etiqueta": "Con problemas" },
+    { "valor": 5, "etiqueta": "Con muchos problemas" }
+  ],
+  "items": [
+    {
+      "id": "A01",
+      "orden": 1,
+      "texto": "Se equivoca en cosas pequeñas por no fijarse bien.",
+      "ejemplo": "Copia mal de la pizarra o se salta renglones, aunque sí sabe hacerlo.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1a",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A02",
+      "orden": 2,
+      "texto": "Le cuesta seguir atento en una tarea o un juego por un rato largo.",
+      "ejemplo": "Empieza la tarea y a los pocos minutos ya anda en otra cosa.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1b",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A03",
+      "orden": 3,
+      "texto": "Parece que no oye cuando usted le habla de frente.",
+      "ejemplo": "Le dice que venga a comer y se queda como si no hubiera escuchado.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1c",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A04",
+      "orden": 4,
+      "texto": "Empieza las cosas pero no las termina, aunque entienda lo que tiene que hacer.",
+      "ejemplo": "Deja la tarea a medias o deja el cuarto sin terminar de ordenar.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1d",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A05",
+      "orden": 5,
+      "texto": "Le cuesta ordenarse: no sabe por dónde empezar ni cómo acomodar sus cosas.",
+      "ejemplo": "La mochila va hecha un desorden y no sabe qué tarea le toca primero.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1e",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A06",
+      "orden": 6,
+      "texto": "Evita o se queja de las tareas en las que hay que pensar mucho.",
+      "ejemplo": "Pide que lo dejen para después cuando toca leer o hacer cuentas.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1f",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A07",
+      "orden": 7,
+      "texto": "Pierde seguido sus cosas.",
+      "ejemplo": "Lápices, cuadernos, el suéter o el dinero del recreo.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1g",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A08",
+      "orden": 8,
+      "texto": "Cualquier cosa lo distrae.",
+      "ejemplo": "Un ruido en la calle o alguien que pasa, y ya perdió el hilo de lo que hacía.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1h",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A09",
+      "orden": 9,
+      "texto": "Se le olvidan las cosas de todos los días.",
+      "ejemplo": "Olvida llevar la tarea, hacer un mandado o lo que usted le acaba de pedir.",
+      "escala": "inatencion",
+      "fuente": "atento",
+      "criterioDSM": "A1i",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A10",
+      "orden": 10,
+      "texto": "No deja quietas las manos o los pies, o se mueve mucho en la silla.",
+      "ejemplo": "En la mesa o en clase se retuerce o mueve las piernas sin parar.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2a",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A11",
+      "orden": 11,
+      "texto": "Se levanta cuando debería quedarse sentado.",
+      "ejemplo": "En clase, en la iglesia o comiendo se para a cada rato.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2b",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A12",
+      "orden": 12,
+      "texto": "Corre o se trepa en lugares donde no debe.",
+      "ejemplo": "Se sube a los muebles o corre dentro de la casa o de la pulpería.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2c",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A13",
+      "orden": 13,
+      "texto": "Le cuesta jugar o entretenerse sin hacer bulla.",
+      "ejemplo": "Hasta en los juegos tranquilos termina gritando o alborotando.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2d",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A14",
+      "orden": 14,
+      "texto": "Anda siempre acelerado, como si no pudiera parar.",
+      "ejemplo": "Parece que tuviera pilas que nunca se gastan; cansa solo de verlo.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2e",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A15",
+      "orden": 15,
+      "texto": "Habla sin parar.",
+      "ejemplo": "Platica y platica aunque le pidan que se calle un momento.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2f",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A16",
+      "orden": 16,
+      "texto": "Contesta antes de que le terminen de preguntar.",
+      "ejemplo": "En clase o en la casa suelta la respuesta sin oír toda la pregunta.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2g",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A17",
+      "orden": 17,
+      "texto": "Le cuesta esperar su turno.",
+      "ejemplo": "En la fila, en los juegos o para pedir algo se desespera y se adelanta.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2h",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "A18",
+      "orden": 18,
+      "texto": "Se mete en lo que otros están haciendo o platicando.",
+      "ejemplo": "Interrumpe la plática de los adultos o se mete en el juego de otros sin pedir permiso.",
+      "escala": "hiperactividad",
+      "fuente": "atento",
+      "criterioDSM": "A2i",
+      "tipo": "frecuencia"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types"],
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "tests/**/*", "scripts/**/*", "*.ts", "*.mjs"],
+  "exclude": ["dist", ".wrangler", "node_modules", "playwright-report", "test-results"]
+}

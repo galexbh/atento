@@ -1,0 +1,11 @@
+# Configuración de pnpm 12 (desde pnpm 11 los ajustes del gestor viven aquí; .npmrc solo lleva auth/registro).
+# Espera 3 días (4320 min) antes de instalar una versión recién publicada: mitiga paquetes comprometidos.
+minimumReleaseAge: 4320
+engineStrict: true
+
+# Paquetes a los que se permite ejecutar scripts de instalación (pnpm bloquea el resto por seguridad).
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  workerd: true
+  "@biomejs/biome": true
