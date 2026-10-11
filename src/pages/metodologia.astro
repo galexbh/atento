@@ -1,0 +1,13 @@
+---
+import { Content, frontmatter, getHeadings } from "@/content/metodologia.md";
+import Legal from "@/layouts/Legal.astro";
+---
+
+<Legal
+  titulo={frontmatter.titulo}
+  descripcion="Qué mide Atento y qué no, qué instrumento usa, cómo se calcula el resultado y cómo se construye el mapa."
+  version={frontmatter.version}
+  encabezados={getHeadings()}
+>
+  <Content />
+</Legal>

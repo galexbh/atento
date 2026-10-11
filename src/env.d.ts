@@ -17,6 +17,8 @@ declare namespace Cloudflare {
     SITE_URL: string;
     /** Entorno de ejecución. */
     ENTORNO: "local" | "preview" | "produccion";
+    /** Sal opcional para el hash de IP del límite de tasa; si falta se deriva de la fecha UTC. */
+    RATE_SALT?: string;
   }
 }
 

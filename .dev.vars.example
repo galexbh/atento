@@ -2,3 +2,16 @@
 # Clave secreta de Cloudflare Turnstile. Para pruebas locales puede usarse la clave de prueba
 # "1x0000000000000000000000000000000AA" (siempre pasa).
 TURNSTILE_SECRET=
+
+# --- Panel de administración (/admin) ---
+# "access" (Cloudflare Access, por defecto) o "password" (respaldo con contraseña única).
+ADMIN_MODO=password
+# Hash generado con: pnpm tsx scripts/hash-password.ts "tu contraseña"
+ADMIN_PASSWORD_HASH=
+# Cadena aleatoria larga para firmar la cookie de sesión (opcional; si falta se deriva del hash).
+ADMIN_SESSION_SECRET=
+# Solo en modo access:
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=
+ADMIN_EMAILS=
+INVESTIGADOR_EMAILS=

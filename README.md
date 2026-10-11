@@ -52,7 +52,53 @@ Otros comandos útiles:
 | `pnpm test:e2e`     | Playwright (móvil Pixel 7 y escritorio) con auditoría axe (`tests/e2e`) |
 | `pnpm build`        | Compila a `dist/` (`dist/server` = Worker, `dist/client` = estáticos)  |
 | `pnpm preview`      | Sirve la build con `wrangler dev` (http://127.0.0.1:8787)            |
-| `pnpm seed`         | Datos de ejemplo (`scripts/seed.ts`)                                 |
+| `pnpm seed`         | Datos de ejemplo (`scripts/seed.ts`); ver "Datos de prueba"          |
+| `pnpm agregar:local` | Recalcula los agregados en la D1 local (`scripts/agregar-local.ts`) |
+
+## API y datos
+
+| Ruta | Qué hace |
+| ---- | -------- |
+| `POST /api/respuesta` | Recibe un cuestionario (JSON ≤ 32 KB, `EsquemaEnvio` estricto), verifica Turnstile, aplica límite de 5 envíos/hora/IP (hash SHA-256 de IP + sal en KV, TTL 1 h; la IP nunca se guarda), puntúa **en servidor** y guarda en `respuestas` solo la fecha UTC (sin hora) y la duración redondeada a 10 s. Respuestas: 201 `{ok, nivel}`, 200 `{ok, duplicado}` si el id ya existía, 400 validación, 403 Turnstile, 413, 415, 429, 503 `{ok:false, motivo:"no_guardado"}`. El honeypot `hp` relleno responde 201 sin guardar. |
+| `GET /api/agregado?periodo=acumulado&nivel=departamento\|municipio&version=todas` | Lee solo `agregados_municipio` (nunca filas individuales). Caché KV 1 h, `Cache-Control: public, max-age=300, s-maxage=3600`, ETag/304. Respuesta `{periodo, nivel, version, calculadoEn, datos:[{codigo, nombre, n, pct, ic95, suprimido, pctInatencion, pctHiperactividad, pctAmbas}]}`. |
+| `GET /api/agregado/periodos` | Periodos (`acumulado`, `2026`, `2026-Q4`, `2026-10`) y versiones de instrumento con agregados. |
+| `GET /api/geo?nivel=departamento` | GeoJSON de departamentos incrustado en el Worker (`public/geo/...geojson?raw`), `application/geo+json`, caché de 1 día (7 en borde), ETag. |
+
+**Agregados.** El cron diario (03:00 UTC, `src/worker.ts` → `src/lib/agregados/recalcular.ts`) recalcula
+`agregados_municipio` desde `respuestas` (solo `completado = 1`) con la función pura `agregar()`
+(`src/lib/agregados/calcular.ts`), escribe en lotes `batch`, borra lo obsoleto por `calculado_en`,
+invalida la caché KV `agregado:*` y, cada 1 de enero, congela el año anterior en `agregados_anuales`
+(`version_dataset = "v1"`, solo versión `todas`). `recalcularAgregados(env)` se exporta para el panel admin. Convenciones:
+
+- `pct_combinado` = % con inatención **o** hiperactividad positiva ("con indicadores"; lleva el IC de Wilson 95 %);
+  `pct_ambas` (migración 0002) = % con las dos a la vez. Porcentajes en 0–100 con dos decimales.
+- Supresión: `n < 5` → `suprimido = 1`, porcentajes e IC en `NULL`, se conserva `n`.
+- Filas por departamento: `municipio = departamento + "00"` (p. ej. `0800` = Francisco Morazán); ningún
+  municipio real usa ese código. `nivel=departamento` en la API devuelve `codigo` de 2 dígitos.
+- Se agrega por cada `version_instrumento` y, además, por `todas`.
+- Turnstile en local/preview sin `TURNSTILE_SECRET`: se asume la clave de prueba de Cloudflare (acepta
+  cualquier token) y no se llama a siteverify. En producción el secreto es obligatorio.
+- `RATE_SALT` (var opcional): sal del hash de IP; si falta se deriva de la fecha UTC.
+
+## Datos de prueba
+
+```bash
+pnpm db:migrate:local          # esquema (migraciones 0001 y 0002)
+pnpm seed -- --n 2000          # respuestas sintéticas -> .wrangler/seed.sql -> D1 local (idempotente por semilla)
+pnpm agregar:local             # recalcula agregados_municipio en la D1 local e invalida la KV local
+pnpm build && pnpm preview     # http://127.0.0.1:8787
+curl "http://127.0.0.1:8787/api/agregado?periodo=acumulado&nivel=departamento"
+```
+
+`pnpm seed` acepta `--semilla 42` (distinta semilla = distintos ids), `--solo-sql` (solo genera el archivo)
+y `--archivo ruta`. `pnpm agregar:local` acepta `--snapshot 2025` para crear el snapshot anual. Para
+disparar el cron real en local: `pnpm build && pnpm exec wrangler dev --test-scheduled` y luego
+`curl "http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*"`.
+
+Para probar `POST /api/respuesta` con `pnpm preview` (que usa `ENTORNO=produccion` de `wrangler.jsonc`,
+donde el secreto es obligatorio), pon en `.dev.vars` la clave de prueba de Turnstile
+`TURNSTILE_SECRET=1x0000000000000000000000000000000AA` (acepta cualquier token; requiere red) o
+`ENTORNO=local` (omite la llamada a siteverify).
 
 ## Despliegue
 

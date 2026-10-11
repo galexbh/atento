@@ -1,0 +1,148 @@
+---
+import { marca } from "@/components/svg";
+
+const ruta = Astro.url.pathname;
+const enlaces = [
+  { href: "/metodologia", texto: "Metodología" },
+  { href: "/contacto", texto: "Contacto" },
+];
+---
+
+<header class="cabecera">
+  <div class="contenedor contenedor--ancho cabecera__fila">
+    <a href="/" class="cabecera__marca" aria-label="Atento, inicio">
+      <Fragment set:html={marca("simbolo", { decorativo: true, clase: "cabecera__simbolo" })} />
+      <span>Atento</span>
+    </a>
+    <nav aria-label="Principal" class="cabecera__nav">
+      {
+        enlaces.map((e) => (
+          <a href={e.href} aria-current={ruta === e.href ? "page" : undefined}>
+            {e.texto}
+          </a>
+        ))
+      }
+      <button type="button" class="tema" data-tema aria-label="Cambiar entre modo claro y oscuro">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            class="tema__sol"
+            d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m0-11.32L4.93 4.93m14.14 14.14-1.41-1.41"
+          ></path>
+          <circle class="tema__sol" cx="12" cy="12" r="4"></circle>
+          <path class="tema__luna" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"></path>
+        </svg>
+      </button>
+      <a href="/cribado/consentimiento" class="boton boton--azul cabecera__cta">Empezar</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .cabecera {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--color-fondo) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--color-borde);
+  }
+  .cabecera__fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-3);
+    min-height: 4rem;
+  }
+  .cabecera__marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    color: var(--color-texto);
+    text-decoration: none;
+    min-height: var(--toque);
+  }
+  .cabecera__simbolo {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  .cabecera__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+  }
+  .cabecera__nav > a:not(.boton) {
+    display: none;
+    padding: 0.5rem 0.75rem;
+    min-height: var(--toque);
+    align-items: center;
+    font-weight: 600;
+    color: var(--color-texto);
+    text-decoration: none;
+    border-radius: var(--radio);
+  }
+  .cabecera__nav > a:not(.boton):hover,
+  .cabecera__nav > a[aria-current="page"] {
+    background: var(--color-primario-suave);
+    color: var(--color-primario-fuerte);
+  }
+  .cabecera__cta {
+    min-height: 2.75rem;
+    padding-block: 0.5rem;
+  }
+  .tema {
+    width: var(--toque);
+    height: var(--toque);
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--color-texto);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .tema:hover {
+    background: var(--color-primario-suave);
+  }
+  .tema svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  .tema__luna {
+    display: none;
+  }
+  :global(:root[data-theme="dark"]) .tema__sol {
+    display: none;
+  }
+  :global(:root[data-theme="dark"]) .tema__luna {
+    display: block;
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .tema__sol {
+      display: none;
+    }
+    :global(:root:not([data-theme="light"])) .tema__luna {
+      display: block;
+    }
+  }
+  @media (min-width: 40rem) {
+    .cabecera__nav > a:not(.boton) {
+      display: inline-flex;
+    }
+  }
+</style>
+
+<script>
+  import { alternarTema } from "@/lib/cliente/tema";
+  document.querySelector<HTMLButtonElement>("[data-tema]")?.addEventListener("click", alternarTema);
+</script>

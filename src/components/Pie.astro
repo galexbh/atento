@@ -1,0 +1,121 @@
+---
+import { marca } from "@/components/svg";
+
+const anio = new Date().getFullYear();
+---
+
+<footer class="pie">
+  <div class="contenedor contenedor--ancho">
+    <div class="pie__rejilla">
+      <div class="pie__marca">
+        <Fragment set:html={marca("simbolo", { decorativo: true, clase: "pie__simbolo" })} />
+        <p>
+          <strong>Atento</strong> es una herramienta comunitaria de cribado, no de diagnóstico ni
+          un servicio de urgencia. Si hay una emergencia, llama al <strong>911</strong>.
+        </p>
+      </div>
+      <nav aria-label="Legal">
+        <h2 class="pie__titulo">Legal</h2>
+        <ul>
+          <li><a href="/legal/terminos">Términos de uso</a></li>
+          <li><a href="/legal/privacidad">Privacidad</a></li>
+          <li><a href="/legal/aviso-de-salud">Aviso de salud</a></li>
+          <li><a href="/legal/cookies">Cookies y almacenamiento</a></li>
+          <li><a href="/legal/accesibilidad">Accesibilidad</a></li>
+          <li><a href="/legal/datos-abiertos">Datos abiertos</a></li>
+          <li><a href="/legal/creditos">Créditos y licencias</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Proyecto">
+        <h2 class="pie__titulo">Proyecto</h2>
+        <ul>
+          <li><a href="/metodologia">Metodología y limitaciones</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="mailto:info@galexbh.dev">info@galexbh.dev</a></li>
+        </ul>
+      </nav>
+    </div>
+    <p class="pie__creditos">
+      Usa la escala NICHQ Vanderbilt (1.ª edición, 2002), © NICHQ y American Academy of
+      Pediatrics, reproducida con crédito a NICHQ. Proyecto personal sin fines de lucro · {anio}.
+    </p>
+  </div>
+</footer>
+
+<style>
+  .pie {
+    background: var(--color-primario);
+    color: #ffffff;
+    padding: var(--espacio-5) 0 var(--espacio-4);
+    margin-top: var(--espacio-5);
+    font-size: 0.95rem;
+  }
+  :global(:root[data-theme="dark"]) .pie {
+    background: var(--color-primario-suave);
+    color: var(--color-texto);
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .pie {
+      background: var(--color-primario-suave);
+      color: var(--color-texto);
+    }
+  }
+  .pie a {
+    color: inherit;
+    text-decoration-color: color-mix(in srgb, currentColor 50%, transparent);
+  }
+  .pie a:hover {
+    text-decoration-color: currentColor;
+    color: inherit;
+  }
+  .pie__rejilla {
+    display: grid;
+    gap: var(--espacio-4);
+    grid-template-columns: 1fr;
+  }
+  .pie__marca {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: var(--espacio-3);
+    align-items: start;
+  }
+  .pie__simbolo {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .pie__marca p {
+    margin: 0;
+  }
+  .pie__titulo {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 var(--espacio-2);
+    opacity: 0.85;
+  }
+  .pie ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .pie li {
+    margin: 0;
+  }
+  .pie li a {
+    display: inline-block;
+    padding: 0.35rem 0;
+  }
+  .pie__creditos {
+    margin: var(--espacio-5) 0 0;
+    padding-top: var(--espacio-3);
+    border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+    opacity: 0.9;
+    max-width: none;
+  }
+  @media (min-width: 48rem) {
+    .pie__rejilla {
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: var(--espacio-5);
+    }
+  }
+</style>

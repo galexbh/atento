@@ -1,0 +1,133 @@
+---
+import { marca } from "@/components/svg";
+
+/** Barra superior del flujo de cribado: marca y los 4 pasos como una sola línea. */
+interface Props {
+  actual: 1 | 2 | 3 | 4;
+}
+const { actual } = Astro.props;
+const pasos = ["Consentimiento", "Datos", "Cuestionario", "Resultado"];
+---
+
+<header class="pasos-flujo no-imprimir">
+  <div class="contenedor contenedor--ancho pasos-flujo__fila">
+    <a href="/" class="pasos-flujo__marca" aria-label="Atento, inicio">
+      <Fragment set:html={marca("simbolo", { decorativo: true, clase: "pasos-flujo__simbolo" })} />
+      <span>Atento</span>
+    </a>
+    <ol class="pasos-flujo__lista" aria-label="Pasos del cribado">
+      {
+        pasos.map((p, i) => {
+          const n = i + 1;
+          const estado = n < actual ? "hecho" : n === actual ? "actual" : "pendiente";
+          return (
+            <li class={`pasos-flujo__paso pasos-flujo__paso--${estado}`} aria-current={n === actual ? "step" : undefined}>
+              <span class="pasos-flujo__punto" aria-hidden="true">{n}</span>
+              <span class="pasos-flujo__texto">{p}</span>
+            </li>
+          );
+        })
+      }
+    </ol>
+  </div>
+</header>
+
+<style>
+  .pasos-flujo {
+    border-bottom: 1px solid var(--color-borde);
+    background: var(--color-superficie);
+  }
+  .pasos-flujo__fila {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    min-height: 3.5rem;
+    padding-block: var(--espacio-2);
+  }
+  .pasos-flujo__marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 800;
+    color: var(--color-texto);
+    text-decoration: none;
+    min-height: var(--toque);
+  }
+  .pasos-flujo__simbolo {
+    width: 2rem;
+    height: 2rem;
+  }
+  .pasos-flujo__marca span {
+    display: none;
+  }
+  .pasos-flujo__lista {
+    list-style: none;
+    margin: 0 0 0 auto;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: none;
+  }
+  .pasos-flujo__paso {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-texto-suave);
+  }
+  .pasos-flujo__paso + .pasos-flujo__paso::before {
+    content: "";
+    width: 1rem;
+    height: 2px;
+    background: var(--color-borde);
+    border-radius: 1px;
+  }
+  .pasos-flujo__paso--hecho + .pasos-flujo__paso::before,
+  .pasos-flujo__paso--hecho::before {
+    background: var(--color-primario);
+  }
+  .pasos-flujo__punto {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-borde);
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--color-texto-suave);
+    background: var(--color-superficie);
+  }
+  .pasos-flujo__paso--actual {
+    color: var(--color-texto);
+  }
+  .pasos-flujo__paso--actual .pasos-flujo__punto {
+    border-color: var(--color-primario);
+    background: var(--color-primario);
+    color: var(--color-primario-contraste);
+  }
+  .pasos-flujo__paso--hecho .pasos-flujo__punto {
+    border-color: var(--color-primario);
+    color: var(--color-primario);
+  }
+  .pasos-flujo__texto {
+    display: none;
+  }
+  .pasos-flujo__paso--actual .pasos-flujo__texto {
+    display: inline;
+  }
+  @media (min-width: 40rem) {
+    .pasos-flujo__marca span {
+      display: inline;
+    }
+    .pasos-flujo__texto {
+      display: inline;
+    }
+    .pasos-flujo__paso + .pasos-flujo__paso::before {
+      width: 1.5rem;
+    }
+  }
+</style>

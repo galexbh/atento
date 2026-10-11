@@ -1,0 +1,36 @@
+---
+import { ilustracion } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+---
+
+<Base titulo="Página no encontrada" descripcion="La página que buscas no existe en Atento." noindex>
+  <section class="contenedor estado">
+    <div class="estado__ilus" set:html={ilustracion("vacio", { decorativo: true, clase: "ilustracion" })} />
+    <h1>No encontramos esa página</h1>
+    <p class="grande">Puede que el enlace esté mal escrito o que la página ya no exista.</p>
+    <p class="estado__acciones">
+      <a href="/" class="boton boton--primario">Ir al inicio</a>
+      <a href="/cribado/consentimiento" class="boton boton--secundario">Empezar el cribado</a>
+    </p>
+  </section>
+</Base>
+
+<style>
+  .estado {
+    text-align: center;
+    padding-block: var(--espacio-5);
+  }
+  .estado__ilus {
+    max-width: 20rem;
+    margin: 0 auto var(--espacio-4);
+  }
+  .estado p {
+    margin-inline: auto;
+  }
+  .estado__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--espacio-3);
+  }
+</style>

@@ -1,16 +1,38 @@
 ---
 import "@/styles/global.css";
+import Cabecera from "@/components/Cabecera.astro";
+import Pie from "@/components/Pie.astro";
 
 interface Props {
+  /** Título corto (se completa con " · Atento"). */
   titulo: string;
   descripcion: string;
   /** Ruta canónica (p. ej. "/metodologia"). Por defecto, la URL actual. */
   canonical?: string;
+  /** Imagen Open Graph (ruta absoluta o relativa al sitio). */
+  imagenOg?: string;
+  /** Evita la indexación (resultado, páginas de flujo). */
+  noindex?: boolean;
+  /** Oculta la cabecera y el pie (pantallas del cuestionario). */
+  compacta?: boolean;
+  /** Clase extra para <body>. */
+  claseCuerpo?: string;
 }
 
-const { titulo, descripcion, canonical } = Astro.props;
+const {
+  titulo,
+  descripcion,
+  canonical,
+  imagenOg = "/marca/og-default.png",
+  noindex = false,
+  compacta = false,
+  claseCuerpo,
+} = Astro.props;
+
 const sitio = Astro.site ?? new URL("https://atento.galexbh.dev");
 const urlCanonica = new URL(canonical ?? Astro.url.pathname, sitio).href;
+const urlImagenOg = new URL(imagenOg, sitio).href;
+const tituloCompleto = titulo.includes("Atento") ? titulo : `${titulo} · Atento`;
 const nonce = Astro.locals.nonce;
 ---
 
@@ -19,34 +41,42 @@ const nonce = Astro.locals.nonce;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{titulo}</title>
+    <title>{tituloCompleto}</title>
     <meta name="description" content={descripcion} />
+    <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
     <link rel="canonical" href={urlCanonica} />
-    <meta property="og:title" content={titulo} />
+    <link rel="icon" href="/marca/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/marca/icono-192.png" />
+    <meta name="theme-color" content="#1f6f8b" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Atento" />
+    <meta property="og:title" content={tituloCompleto} />
     <meta property="og:description" content={descripcion} />
+    <meta property="og:image" content={urlImagenOg} />
     <meta property="og:url" content={urlCanonica} />
     <meta property="og:locale" content="es_HN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={tituloCompleto} />
+    <meta name="twitter:description" content={descripcion} />
+    <meta name="twitter:image" content={urlImagenOg} />
     <meta name="csp-nonce" content={nonce} />
     <slot name="head" />
+    {/* Tema guardado (atento:tema) antes del primer pintado para evitar parpadeo. */}
+    <script is:inline nonce={nonce}>
+      try {
+        var t = localStorage.getItem("atento:tema");
+        if (t === "claro" || t === "oscuro") {
+          document.documentElement.dataset.theme = t === "claro" ? "light" : "dark";
+        }
+      } catch (e) {}
+    </script>
   </head>
-  <body>
+  <body class={claseCuerpo}>
     <a class="salto-contenido" href="#contenido">Ir al contenido</a>
+    {!compacta && <Cabecera />}
     <main id="contenido">
       <slot />
     </main>
-    <footer class="pie">
-      <div class="pie__contenido">
-        <ul>
-          <li><a href="/legal/terminos">Términos de uso</a></li>
-          <li><a href="/legal/privacidad">Privacidad</a></li>
-          <li><a href="/metodologia">Metodología</a></li>
-          <li><a href="/contacto">Contacto</a></li>
-        </ul>
-        <p>
-          Atento es una herramienta comunitaria de cribado, no de diagnóstico. Escríbenos a{" "}
-          <a href="mailto:info@galexbh.dev">info@galexbh.dev</a>.
-        </p>
-      </div>
-    </footer>
+    {!compacta && <Pie />}
   </body>
 </html>

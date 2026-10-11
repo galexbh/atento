@@ -1,0 +1,507 @@
+---
+import { icono, ilustracion, marca } from "@/components/svg";
+import textos from "@/content/resultados/textos.json";
+import Base from "@/layouts/Base.astro";
+import { INSTRUMENTO_ACTUAL, obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
+
+const instrumento = obtenerInstrumento(INSTRUMENTO_ACTUAL);
+const niveles = ["bajo", "moderado", "alto"] as const;
+const alertasIds = ["oposicion", "conducta", "ansiedad_depresion"] as const;
+
+/** Convierte **negrita** del JSON a <strong> (contenido propio, no de usuario). */
+function enfatizar(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+const ILUSTRACION_NIVEL = {
+  bajo: "resultado-bajo",
+  moderado: "resultado-moderado",
+  alto: "resultado-alto",
+} as const;
+
+const ETIQUETA_NIVEL = {
+  bajo: "Nivel bajo",
+  moderado: "Nivel moderado",
+  alto: "Nivel alto",
+} as const;
+---
+
+<Base
+  titulo="Tu resultado"
+  descripcion="Resultado orientativo del cribado Atento. No es un diagnóstico."
+  noindex
+  claseCuerpo="pagina-resultado"
+>
+  <article class="contenedor resultado" id="resultado" data-instrumento-nombre={instrumento.nombre} data-instrumento-version={instrumento.version}>
+    <section class="sin-resultado" id="sin-resultado" hidden aria-labelledby="sin-titulo">
+      <div class="sin-resultado__ilus" set:html={ilustracion("vacio", { decorativo: true, clase: "ilustracion" })} />
+      <h1 id="sin-titulo">Aún no hay un resultado en este dispositivo</h1>
+      <p class="grande">
+        El resultado se guarda solo en el teléfono o computadora donde se respondió el cuestionario.
+      </p>
+      <p><a href="/cribado/consentimiento" class="boton boton--primario boton--grande">Empezar el cribado</a></p>
+    </section>
+
+    <div id="con-resultado" hidden>
+      {/* Portada de impresión */}
+      <header class="portada">
+        <div class="portada__marca">
+          <Fragment set:html={marca("logo", { titulo: "Atento", clase: "portada__logo" })} />
+          <p class="portada__sub">Cribado comunitario de TDAH · no es un diagnóstico</p>
+        </div>
+        <dl class="portada__datos">
+          <div><dt>Fecha</dt><dd id="meta-fecha"></dd></div>
+          <div><dt>Instrumento</dt><dd>{instrumento.nombre}, versión {instrumento.version}</dd></div>
+          <div><dt>Código de vínculo</dt><dd id="meta-codigo" class="tabular"></dd></div>
+          <div><dt>Responde</dt><dd id="meta-informante"></dd></div>
+        </dl>
+      </header>
+
+      <div class="aviso aviso--importante aviso-salud">
+        <p class="aviso__titulo">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4m0 4h.01"></path></svg>
+          {textos.avisoSalud.titulo}
+        </p>
+        {textos.avisoSalud.parrafos.map((p) => <p>{p}</p>)}
+      </div>
+
+      <p class="estado-guardado" id="estado-guardado" hidden role="status"></p>
+
+      {
+        niveles.map((nivel) => {
+          const t = textos.niveles[nivel];
+          return (
+            <section class={`nivel nivel--${nivel}`} data-nivel={nivel} hidden aria-labelledby={`titulo-${nivel}`}>
+              <div class="nivel__cabecera">
+                <div class="nivel__ilus" set:html={ilustracion(ILUSTRACION_NIVEL[nivel], { clase: "ilustracion", titulo: `Ilustración: ${ETIQUETA_NIVEL[nivel]}` })} />
+                <div>
+                  <p class={`etiqueta etiqueta--${nivel}`}>{ETIQUETA_NIVEL[nivel]}</p>
+                  <h1 id={`titulo-${nivel}`}>{t.titulo}</h1>
+                  <p class="grande" set:html={enfatizar(t.resumen)} />
+                </div>
+              </div>
+              <p class="nota-incompleto" data-incompleto hidden />
+              <h2>Qué significa</h2>
+              <p set:html={enfatizar(t.significado)} />
+              <h2>{t.queHacerTitulo}</h2>
+              {t.queHacerNumerado ? (
+                <ol class="lista-hacer">
+                  {t.queHacer.map((q) => (
+                    <li set:html={enfatizar(q)} />
+                  ))}
+                </ol>
+              ) : (
+                <ul class="lista-hacer">
+                  {t.queHacer.map((q) => (
+                    <li set:html={enfatizar(q)} />
+                  ))}
+                </ul>
+              )}
+              {t.queNoHacer.length > 0 && (
+                <>
+                  <h2>Qué no hacer</h2>
+                  <ul class="lista-no">
+                    {t.queNoHacer.map((q) => (
+                      <li set:html={enfatizar(q)} />
+                    ))}
+                  </ul>
+                </>
+              )}
+              {t.mensajeFinal && (
+                <p class="mensaje-final">
+                  <strong>Un mensaje más.</strong> {t.mensajeFinal}
+                </p>
+              )}
+            </section>
+          );
+        })
+      }
+
+      <section class="grafico" aria-labelledby="grafico-titulo">
+        <h2 id="grafico-titulo">Lo que marcaste, por área</h2>
+        <p class="suave">
+          Cada barra cuenta cuántas preguntas de esa área marcaste como frecuentes ("a menudo" o
+          "muy a menudo"; en desempeño, "algo problemático" o "problemático"). La marca vertical es
+          el mínimo que la escala considera relevante.
+        </p>
+        <figure class="grafico__figura">
+          <div id="grafico-svg"></div>
+          <figcaption id="grafico-alt" class="visualmente-oculto"></figcaption>
+        </figure>
+        <details class="plegable">
+          <summary>Ver como tabla</summary>
+          <table class="tabla-escalas">
+            <thead>
+              <tr><th scope="col">Área</th><th scope="col">Marcadas</th><th scope="col">Mínimo relevante</th><th scope="col">Preguntas</th></tr>
+            </thead>
+            <tbody id="grafico-tabla"></tbody>
+          </table>
+        </details>
+      </section>
+
+      <div id="alertas">
+        {
+          alertasIds.map((id) => {
+            const a = textos.alertas[id];
+            return (
+              <section class={`aviso ${a.prioritaria ? "aviso--alerta" : "aviso--importante"} alerta`} data-alerta={id} hidden aria-labelledby={`alerta-${id}`}>
+                <h2 id={`alerta-${id}`} class="aviso__titulo">
+                  <span set:html={icono(a.prioritaria ? "docente" : "tareas")} />
+                  {a.titulo}
+                </h2>
+                {a.parrafos.map((p) => (
+                  <p set:html={enfatizar(p)} />
+                ))}
+              </section>
+            );
+          })
+        }
+        <section class="aviso aviso--alerta alerta" data-alerta="combinada" hidden aria-labelledby="alerta-combinada">
+          <h2 id="alerta-combinada" class="aviso__titulo">{textos.alertas.combinada.titulo}</h2>
+          <p>{textos.alertas.combinada.intro}</p>
+          <ul id="alerta-combinada-lista"></ul>
+          {textos.alertas.combinada.parrafos.map((p) => <p set:html={enfatizar(p)} />)}
+        </section>
+      </div>
+
+      <section class="acciones no-imprimir" aria-label="Acciones">
+        <button type="button" class="boton boton--primario boton--grande" id="descargar">
+          <Fragment set:html={icono("descargar")} />
+          Descargar PDF
+        </button>
+        <button type="button" class="boton boton--secundario boton--grande" id="invitar" aria-expanded="false" aria-controls="panel-docente">
+          <Fragment set:html={icono("docente")} />
+          Invitar al docente
+        </button>
+        <a href="/" class="boton boton--texto" id="accion-secundaria">Volver al inicio</a>
+      </section>
+
+      <section class="panel docente" id="panel-docente" hidden aria-labelledby="docente-titulo">
+        <div class="docente__ilus" set:html={ilustracion("docente", { decorativo: true, clase: "ilustracion" })} />
+        <div>
+          <h2 id="docente-titulo">Invitar al docente</h2>
+          <p>
+            La mirada de la escuela es muy valiosa. Comparte este mensaje con el docente: incluye el
+            enlace al cuestionario y tu código de vínculo, <strong>nunca tu resultado</strong>.
+          </p>
+          <p class="codigo">
+            Código de vínculo: <strong id="codigo-docente" class="tabular"></strong>
+          </p>
+          <textarea id="mensaje-docente" class="entrada" rows="5" readonly aria-label="Mensaje para el docente"></textarea>
+          <div class="docente__acciones no-imprimir">
+            <a id="whatsapp" class="boton boton--azul" href="#" target="_blank" rel="noopener">
+              <Fragment set:html={icono("compartir")} />
+              Enviar por WhatsApp
+            </a>
+            <button type="button" class="boton boton--secundario" id="copiar">Copiar mensaje</button>
+          </div>
+          <p class="suave" id="copiado" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="codigo-vinculo">
+        <h2>Tu código de vínculo</h2>
+        <p>
+          <strong id="codigo-grande" class="tabular codigo-grande"></strong>
+        </p>
+        <p>
+          Guárdalo si quieres poder pedir que borremos tu respuesta en el futuro. No lo compartas
+          con nadie más que el docente. Nosotros no lo guardamos junto a ningún dato tuyo.
+        </p>
+      </section>
+
+      <p class="pie-resultado suave">
+        {textos.pie} <a href="/legal/privacidad">Aviso de privacidad</a>.
+      </p>
+    </div>
+  </article>
+</Base>
+
+<script>
+  import { iniciarResultado } from "@/lib/cliente/resultado";
+  iniciarResultado(document.getElementById("resultado") as HTMLElement);
+</script>
+
+<style>
+  .resultado {
+    padding-block: var(--espacio-4) var(--espacio-5);
+  }
+  [hidden] {
+    display: none !important;
+  }
+  .sin-resultado {
+    text-align: center;
+    padding-block: var(--espacio-5);
+  }
+  .sin-resultado__ilus {
+    max-width: 18rem;
+    margin: 0 auto var(--espacio-4);
+  }
+  .sin-resultado p {
+    margin-inline: auto;
+  }
+  .portada {
+    display: none;
+  }
+  .aviso-salud {
+    margin-bottom: var(--espacio-4);
+  }
+  .estado-guardado {
+    padding: var(--espacio-2) var(--espacio-3);
+    border-radius: var(--radio);
+    background: var(--color-superficie-2);
+    font-size: 0.95rem;
+    margin-bottom: var(--espacio-4);
+  }
+  .nivel__cabecera {
+    display: grid;
+    gap: var(--espacio-3);
+    align-items: center;
+    margin-bottom: var(--espacio-4);
+  }
+  .nivel__ilus {
+    max-width: 16rem;
+  }
+  .etiqueta {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: var(--espacio-2);
+    border: var(--borde-ancho) solid currentColor;
+  }
+  .etiqueta--bajo {
+    color: var(--color-verde-texto);
+  }
+  .etiqueta--moderado {
+    color: var(--color-acento-texto);
+  }
+  .etiqueta--alto {
+    color: var(--color-coral-texto);
+  }
+  .nivel h1 {
+    font-size: clamp(1.7rem, 1.2rem + 2vw, 2.5rem);
+  }
+  .nivel h2,
+  .grafico h2,
+  .codigo-vinculo h2 {
+    font-size: 1.3rem;
+    margin-top: var(--espacio-4);
+  }
+  .nota-incompleto {
+    padding: var(--espacio-2) var(--espacio-3);
+    border-radius: var(--radio);
+    background: var(--color-superficie-2);
+  }
+  .lista-hacer,
+  .lista-no {
+    padding-left: 1.4rem;
+  }
+  .lista-hacer li,
+  .lista-no li {
+    margin-bottom: var(--espacio-2);
+  }
+  .lista-no {
+    list-style: none;
+    padding-left: 0;
+  }
+  .lista-no li {
+    position: relative;
+    padding-left: 1.8rem;
+  }
+  .lista-no li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.3em;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    border: 2.5px solid var(--color-coral-texto);
+    background-image: linear-gradient(135deg, transparent 44%, var(--color-coral-texto) 44%, var(--color-coral-texto) 56%, transparent 56%);
+  }
+  .mensaje-final {
+    padding: var(--espacio-3) var(--espacio-4);
+    border-radius: var(--radio);
+    background: var(--color-verde-suave);
+  }
+  .grafico {
+    margin-top: var(--espacio-5);
+  }
+  .grafico__figura {
+    margin: 0 0 var(--espacio-3);
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    padding: var(--espacio-3);
+  }
+  .grafico__figura :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+    font-family: inherit;
+  }
+  .tabla-escalas {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.95rem;
+  }
+  .tabla-escalas th,
+  .tabla-escalas td {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--color-borde);
+  }
+  .tabla-escalas td:not(:first-child) {
+    font-variant-numeric: tabular-nums;
+  }
+  .alerta {
+    margin-top: var(--espacio-4);
+  }
+  .alerta h2 {
+    font-size: 1.2rem;
+    margin: 0 0 var(--espacio-2);
+  }
+  .alerta .aviso__titulo :global(svg) {
+    width: 1.4em;
+    height: 1.4em;
+  }
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-3);
+    margin-top: var(--espacio-5);
+    align-items: center;
+  }
+  .docente {
+    margin-top: var(--espacio-4);
+    display: grid;
+    gap: var(--espacio-3);
+  }
+  .docente__ilus {
+    max-width: 14rem;
+  }
+  .docente textarea {
+    resize: vertical;
+    font-size: 0.95rem;
+    margin-bottom: var(--espacio-3);
+  }
+  .docente__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-2);
+  }
+  .codigo {
+    font-size: 1.1rem;
+  }
+  .codigo-vinculo {
+    margin-top: var(--espacio-5);
+    padding-top: var(--espacio-4);
+    border-top: var(--borde-ancho) solid var(--color-borde);
+  }
+  .codigo-grande {
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+    color: var(--color-primario-fuerte);
+  }
+  .pie-resultado {
+    margin-top: var(--espacio-4);
+    font-size: 0.9rem;
+  }
+  @media (min-width: 40rem) {
+    .nivel__cabecera {
+      grid-template-columns: 14rem 1fr;
+      gap: var(--espacio-4);
+    }
+    .docente {
+      grid-template-columns: 12rem 1fr;
+    }
+  }
+  @media (max-width: 30rem) {
+    .acciones .boton--grande {
+      width: 100%;
+    }
+  }
+
+  /* Impresión / "Descargar PDF": portada con marca, nivel, gráfico, fecha, versión y código. */
+  @media print {
+    @page {
+      margin: 16mm;
+    }
+    .resultado {
+      padding: 0;
+      max-width: none;
+    }
+    .portada {
+      display: block;
+      border-bottom: 2px solid #1f6f8b;
+      padding-bottom: 8mm;
+      margin-bottom: 8mm;
+      break-inside: avoid;
+    }
+    .portada__logo {
+      width: 60mm;
+      height: auto;
+    }
+    .portada__sub {
+      margin: 2mm 0 6mm;
+      color: #1f6f8b;
+      font-weight: 700;
+    }
+    .portada__datos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2mm 8mm;
+      margin: 0;
+      font-size: 10.5pt;
+    }
+    .portada__datos dt {
+      font-weight: 700;
+      color: #4a5962;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .portada__datos dd {
+      margin: 0;
+    }
+    .aviso-salud,
+    .alerta,
+    .grafico__figura,
+    .mensaje-final,
+    .nivel__cabecera {
+      break-inside: avoid;
+    }
+    .aviso {
+      border-color: #999;
+      background: #fff;
+    }
+    .nivel__ilus {
+      max-width: 40mm;
+    }
+    .etiqueta {
+      border-color: #000;
+      color: #000;
+    }
+    .plegable {
+      display: none;
+    }
+    .docente,
+    .salto-contenido {
+      display: none !important;
+    }
+    .codigo-grande {
+      color: #000;
+    }
+    a[href]::after {
+      content: "";
+    }
+  }
+</style>

@@ -1,0 +1,112 @@
+---
+import Base from "@/layouts/Base.astro";
+
+/** Plantilla para documentos largos (legal, metodología): índice lateral y fecha de versión. */
+interface Encabezado {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  titulo: string;
+  descripcion: string;
+  version?: string;
+  encabezados: Encabezado[];
+  noindex?: boolean;
+}
+
+const { titulo, descripcion, version, encabezados, noindex = false } = Astro.props;
+const indice = encabezados.filter((h) => h.depth === 2);
+---
+
+<Base titulo={titulo} descripcion={descripcion} noindex={noindex}>
+  <article class="contenedor contenedor--ancho documento">
+    <header class="documento__cabecera">
+      <h1>{titulo}</h1>
+      {version && <p class="documento__version">{version}</p>}
+    </header>
+    <div class="documento__cuerpo">
+      {
+        indice.length > 1 && (
+          <nav class="indice" aria-labelledby="indice-titulo">
+            <h2 id="indice-titulo">En esta página</h2>
+            <ol>
+              {indice.map((h) => (
+                <li>
+                  <a href={`#${h.slug}`}>{h.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+      <div class="prosa">
+        <slot />
+      </div>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .documento {
+    padding-block: var(--espacio-5);
+  }
+  .documento__cabecera {
+    margin-bottom: var(--espacio-4);
+    padding-bottom: var(--espacio-4);
+    border-bottom: var(--borde-ancho) solid var(--color-borde);
+  }
+  .documento__version {
+    margin: 0;
+    color: var(--color-texto-suave);
+    font-size: 0.95rem;
+  }
+  .documento__cuerpo {
+    display: grid;
+    gap: var(--espacio-4);
+    align-items: start;
+  }
+  .indice {
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    padding: var(--espacio-3) var(--espacio-4);
+  }
+  .indice h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 var(--espacio-2);
+    color: var(--color-texto-suave);
+  }
+  .indice ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.95rem;
+  }
+  .indice li {
+    margin: 0;
+  }
+  .indice a {
+    display: inline-block;
+    padding: 0.25rem 0;
+  }
+  .prosa :global(h2:first-child) {
+    margin-top: 0;
+  }
+  .prosa :global(h2) {
+    scroll-margin-top: 5rem;
+  }
+  @media (min-width: 56rem) {
+    .documento__cuerpo {
+      grid-template-columns: 16rem minmax(0, 1fr);
+      gap: var(--espacio-5);
+    }
+    .indice {
+      position: sticky;
+      top: 5rem;
+      order: 2;
+    }
+  }
+</style>

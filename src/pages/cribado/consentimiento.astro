@@ -1,0 +1,135 @@
+---
+import Pasos from "@/components/Pasos.astro";
+import Base from "@/layouts/Base.astro";
+---
+
+<Base
+  titulo="Antes de empezar"
+  descripcion="Consentimiento informado del cribado Atento: cribado, no diagnóstico; sin datos que te identifiquen."
+  noindex
+  compacta
+>
+  <div class="flujo">
+    <Pasos actual={1} />
+    <form class="contenedor flujo__cuerpo" id="consentimiento" novalidate>
+      <h1>Antes de empezar</h1>
+      <p class="grande">
+        Este cuestionario toma unos 10 minutos. Es un <strong>cribado</strong>, no un diagnóstico.
+        Al final verás un resultado orientativo y una recomendación sobre si conviene consultar a
+        un profesional.
+      </p>
+      <p>No te pedimos nombre, correo ni ningún dato que te identifique. Lee y marca las casillas para continuar.</p>
+
+      <fieldset>
+        <legend class="visualmente-oculto">Confirmaciones</legend>
+        <label class="casilla">
+          <input type="checkbox" name="adulto" id="c-adulto" required />
+          <span>
+            Confirmo que soy mayor de 18 años y que soy madre, padre, tutor o responsable del niño o
+            niña, o un docente con autorización de su familia. Entiendo que Atento es un cribado y
+            <strong>no un diagnóstico</strong>, y que no sustituye la evaluación de un profesional de
+            salud.
+          </span>
+        </label>
+        <label class="casilla">
+          <input type="checkbox" name="terminos" id="c-terminos" required />
+          <span>
+            He leído y acepto los <a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> y la
+            <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a>.
+          </span>
+        </label>
+        <label class="casilla casilla--opcional">
+          <input type="checkbox" name="investigacion" id="c-investigacion" />
+          <span>
+            <strong>Opcional.</strong> Autorizo que mis respuestas, de forma anónima, se usen para
+            investigación y para estadísticas públicas del mapa nacional de Atento.
+          </span>
+        </label>
+      </fieldset>
+
+      <details class="plegable" id="que-implica-c">
+        <summary>¿Qué implica la casilla opcional?</summary>
+        <div class="prosa">
+          <p>
+            Si marcas esta casilla, guardamos tus respuestas en una base de datos <strong>sin nada que te identifique</strong>:
+            solo departamento y municipio, edad en años y sexo del niño o niña, quién responde (madre, padre, docente u otro),
+            las respuestas, la fecha y la duración aproximada. No guardamos nombre, correo, IP ni ubicación exacta.
+          </p>
+          <p>
+            Con esos datos publicamos <strong>estadísticas agregadas</strong> en un mapa de Honduras, bajo licencia abierta
+            (CC BY 4.0). Para proteger a las familias, solo mostramos cifras de un municipio cuando hay al menos 5 respuestas.
+          </p>
+          <p>
+            Los datos fila por fila nunca se publican. Solo podrían compartirse con una universidad o centro de investigación,
+            bajo acuerdo escrito y aval de un comité de ética, y siempre anónimos.
+          </p>
+          <p>Los datos se guardan en Cloudflare, en servidores que pueden estar fuera de Honduras.</p>
+          <p>
+            Puedes retirar tu consentimiento escribiendo a <a href="mailto:info@galexbh.dev">info@galexbh.dev</a>. Como no
+            sabemos qué respuesta es tuya, solo podremos borrarla si conservas el <strong>código de vínculo</strong> que te
+            mostraremos al terminar.
+          </p>
+          <p>Si no marcas la casilla, tus respuestas se usan solo para calcular tu resultado y no se conservan.</p>
+          <p>Puedes usar el cribado aunque no marques esta casilla.</p>
+        </div>
+      </details>
+
+      <p class="flujo__ayuda" id="ayuda-consentimiento" aria-live="polite">
+        Marca las dos primeras casillas para continuar.
+      </p>
+      <div class="flujo__acciones">
+        <a href="/" class="boton boton--texto">Volver</a>
+        <button type="submit" class="boton boton--primario boton--grande" id="continuar" disabled aria-describedby="ayuda-consentimiento">
+          Empezar el cuestionario
+        </button>
+      </div>
+    </form>
+  </div>
+</Base>
+
+<style>
+  .casilla--opcional {
+    border-style: dashed;
+  }
+  .plegable {
+    margin-top: var(--espacio-4);
+  }
+</style>
+
+<script>
+  import { almacen, VERSION_CONSENTIMIENTO } from "@/lib/cliente/almacen";
+
+  const form = document.getElementById("consentimiento") as HTMLFormElement;
+  const adulto = document.getElementById("c-adulto") as HTMLInputElement;
+  const terminos = document.getElementById("c-terminos") as HTMLInputElement;
+  const investigacion = document.getElementById("c-investigacion") as HTMLInputElement;
+  const continuar = document.getElementById("continuar") as HTMLButtonElement;
+  const ayuda = document.getElementById("ayuda-consentimiento") as HTMLElement;
+
+  const previo = almacen.leerConsentimiento();
+  if (previo?.version === VERSION_CONSENTIMIENTO) {
+    investigacion.checked = previo.investigacion;
+  }
+
+  function actualizar(): void {
+    const listo = adulto.checked && terminos.checked;
+    continuar.disabled = !listo;
+    ayuda.textContent = listo
+      ? "Listo. Puedes empezar el cuestionario."
+      : "Marca las dos primeras casillas para continuar.";
+  }
+
+  form.addEventListener("change", actualizar);
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!(adulto.checked && terminos.checked)) return;
+    almacen.guardarConsentimiento({
+      version: VERSION_CONSENTIMIENTO,
+      investigacion: investigacion.checked,
+      fecha: new Date().toISOString(),
+    });
+    window.location.href = "/cribado/datos";
+  });
+  actualizar();
+  form.dataset.listo = "1";
+</script>

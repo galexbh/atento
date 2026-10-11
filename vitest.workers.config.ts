@@ -15,13 +15,16 @@ export default defineConfig({
         main: "./tests/workers/entrada.ts",
         miniflare: {
           // Binding solo para pruebas: lista de migraciones que aplica setup.ts.
-          bindings: { TEST_MIGRATIONS: migrations },
+          // TURNSTILE_SECRET de prueba: obliga a pasar por siteverify (que las pruebas mockean).
+          bindings: { TEST_MIGRATIONS: migrations, TURNSTILE_SECRET: "secreto-de-prueba" },
         },
       };
     }),
   ],
   test: {
     include: ["tests/workers/**/*.test.ts"],
+    // Las pruebas del panel /admin usan su propia entrada y bindings: vitest.admin.config.ts.
+    exclude: ["tests/workers/admin*.test.ts"],
     setupFiles: ["./tests/workers/setup.ts"],
     passWithNoTests: true,
   },

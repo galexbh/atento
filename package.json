@@ -25,7 +25,9 @@
     "db:migrate:preview": "wrangler d1 migrations apply atento-db --env preview --remote",
     "db:migrate:prod": "wrangler d1 migrations apply atento-db --remote",
     "seed": "tsx scripts/seed.ts",
-    "prepare": "lefthook install"
+    "agregar:local": "tsx scripts/agregar-local.ts",
+    "prepare": "lefthook install",
+    "test:admin": "vitest run -c vitest.admin.config.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.3.4",

@@ -1,0 +1,222 @@
+---
+import Pasos from "@/components/Pasos.astro";
+import textos from "@/content/resultados/textos.json";
+import Base from "@/layouts/Base.astro";
+import { listarDepartamentos, listarTodosLosMunicipios } from "@/lib/catalogo/geo";
+
+const departamentos = listarDepartamentos();
+// Catálogo compacto para el cliente: [codigoMunicipio, nombre]; el departamento son los 2 primeros dígitos.
+const municipios = listarTodosLosMunicipios().map((m) => [m.codigo, m.nombre]);
+const edades = [6, 7, 8, 9, 10, 11, 12];
+const fuera = textos.edadFueraDeRango;
+---
+
+<Base
+  titulo="Datos del niño o niña"
+  descripcion="Departamento, municipio, edad, sexo y quién responde. Sin nombres."
+  noindex
+  compacta
+>
+  <div class="flujo">
+    <Pasos actual={2} />
+    <div class="contenedor flujo__cuerpo">
+      <form id="datos" novalidate>
+        <h1>Sobre el niño o la niña</h1>
+        <p class="grande">Solo lo necesario para ubicar la respuesta en el mapa. Nada que identifique a nadie.</p>
+
+        <div class="campo">
+          <label for="departamento">¿En qué departamento viven?</label>
+          <select id="departamento" name="departamento" class="selector" required>
+            <option value="">Elige un departamento</option>
+            {departamentos.map((d) => <option value={d.codigo}>{d.nombre}</option>)}
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="municipio">¿En qué municipio?</label>
+          <select id="municipio" name="municipio" class="selector" required disabled aria-describedby="ayuda-municipio">
+            <option value="">Primero elige el departamento</option>
+          </select>
+          <span class="ayuda" id="ayuda-municipio">El municipio solo se usa para estadísticas agrupadas.</span>
+        </div>
+
+        <fieldset class="campo">
+          <legend>¿Cuántos años tiene?</legend>
+          <div class="opciones opciones--fila" role="radiogroup" aria-describedby="ayuda-edad">
+            {
+              edades.map((e) => (
+                <label class="opcion opcion--centrada">
+                  <input type="radio" name="edadAnios" value={e} required />
+                  <span>{e}</span>
+                </label>
+              ))
+            }
+            <label class="opcion opcion--centrada">
+              <input type="radio" name="edadAnios" value="menor" />
+              <span>Menos de 6</span>
+            </label>
+            <label class="opcion opcion--centrada">
+              <input type="radio" name="edadAnios" value="mayor" />
+              <span>Más de 12</span>
+            </label>
+          </div>
+          <span class="ayuda" id="ayuda-edad">Años cumplidos.</span>
+        </fieldset>
+
+        <fieldset class="campo">
+          <legend>Sexo</legend>
+          <div class="opciones opciones--fila">
+            <label class="opcion opcion--centrada"><input type="radio" name="sexo" value="F" required /><span>Niña</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="sexo" value="M" /><span>Niño</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="sexo" value="X" /><span>Prefiero no decir</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="campo">
+          <legend>¿Quién responde?</legend>
+          <div class="opciones opciones--fila">
+            <label class="opcion opcion--centrada"><input type="radio" name="informante" value="madre" required /><span>Madre</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="informante" value="padre" /><span>Padre</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="informante" value="cuidador" /><span>Otro cuidador</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="informante" value="docente" /><span>Docente</span></label>
+          </div>
+        </fieldset>
+
+        <p class="flujo__ayuda" id="ayuda-datos" role="alert"></p>
+        <div class="flujo__acciones">
+          <a href="/cribado/consentimiento" class="boton boton--texto">Atrás</a>
+          <button type="submit" class="boton boton--primario boton--grande">Continuar</button>
+        </div>
+      </form>
+
+      <section id="fuera-rango" class="fuera" hidden aria-labelledby="fuera-titulo">
+        <h1 id="fuera-titulo" tabindex="-1">{fuera.menor.titulo}</h1>
+        <div id="fuera-menor">
+          {fuera.menor.parrafos.map((p) => <p class="grande">{p}</p>)}
+        </div>
+        <div id="fuera-mayor" hidden>
+          {fuera.mayor.parrafos.map((p) => <p class="grande">{p}</p>)}
+        </div>
+        <div class="flujo__acciones">
+          <button type="button" class="boton boton--texto" id="fuera-volver">Cambiar la edad</button>
+          <a href="/" class="boton boton--secundario">Volver al inicio</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</Base>
+
+<script is:inline type="application/json" id="catalogo-municipios" set:html={JSON.stringify(municipios)} />
+
+<script>
+  import { almacen, type DatosNino } from "@/lib/cliente/almacen";
+
+  const municipios = JSON.parse(
+    (document.getElementById("catalogo-municipios") as HTMLElement).textContent ?? "[]",
+  ) as [string, string][];
+
+  const form = document.getElementById("datos") as HTMLFormElement;
+  const depto = document.getElementById("departamento") as unknown as HTMLSelectElement;
+  const muni = document.getElementById("municipio") as unknown as HTMLSelectElement;
+  const ayuda = document.getElementById("ayuda-datos") as HTMLElement;
+  const fuera = document.getElementById("fuera-rango") as HTMLElement;
+  const fueraMenor = document.getElementById("fuera-menor") as HTMLElement;
+  const fueraMayor = document.getElementById("fuera-mayor") as HTMLElement;
+
+  if (!almacen.leerConsentimiento()) {
+    window.location.replace("/cribado/consentimiento");
+  }
+
+  function llenarMunicipios(codDepto: string, seleccionado?: string): void {
+    muni.innerHTML = "";
+    const lista = municipios.filter(([codigo]) => codigo.startsWith(codDepto));
+    const vacia = document.createElement("option");
+    vacia.value = "";
+    vacia.textContent = lista.length ? "Elige un municipio" : "Primero elige el departamento";
+    muni.appendChild(vacia);
+    for (const [codigo, nombre] of lista) {
+      const op = document.createElement("option");
+      op.value = codigo;
+      op.textContent = nombre;
+      if (codigo === seleccionado) op.selected = true;
+      muni.appendChild(op);
+    }
+    muni.disabled = lista.length === 0;
+  }
+
+  depto.addEventListener("change", () => llenarMunicipios(depto.value));
+  if (depto.value) llenarMunicipios(depto.value);
+
+  // Restaura datos previos (si la persona vuelve atrás).
+  const previos = almacen.leerDatos();
+  if (previos) {
+    depto.value = previos.departamento;
+    llenarMunicipios(previos.departamento, previos.municipio);
+    for (const [nombre, valor] of [
+      ["edadAnios", String(previos.edadAnios)],
+      ["sexo", previos.sexo],
+      ["informante", previos.informante],
+    ]) {
+      const radio = form.querySelector<HTMLInputElement>(`input[name="${nombre}"][value="${valor}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+
+  function valorRadio(nombre: string): string {
+    return form.querySelector<HTMLInputElement>(`input[name="${nombre}"]:checked`)?.value ?? "";
+  }
+
+  function mostrarFueraDeRango(tipo: "menor" | "mayor"): void {
+    form.hidden = true;
+    fuera.hidden = false;
+    fueraMenor.hidden = tipo !== "menor";
+    fueraMayor.hidden = tipo !== "mayor";
+    (document.getElementById("fuera-titulo") as HTMLElement).focus();
+    window.scrollTo({ top: 0 });
+  }
+
+  (document.getElementById("fuera-volver") as HTMLButtonElement).addEventListener("click", () => {
+    fuera.hidden = true;
+    form.hidden = false;
+    form.querySelector<HTMLInputElement>('input[name="edadAnios"]:checked')?.focus();
+  });
+
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const edad = valorRadio("edadAnios");
+    if (edad === "menor" || edad === "mayor") {
+      mostrarFueraDeRango(edad);
+      return;
+    }
+    const datos: DatosNino = {
+      departamento: depto.value,
+      municipio: muni.value,
+      edadAnios: Number(edad),
+      sexo: valorRadio("sexo") as DatosNino["sexo"],
+      informante: valorRadio("informante") as DatosNino["informante"],
+    };
+    const faltan: string[] = [];
+    if (!datos.departamento) faltan.push("el departamento");
+    if (!datos.municipio) faltan.push("el municipio");
+    if (!datos.edadAnios) faltan.push("la edad");
+    if (!datos.sexo) faltan.push("el sexo");
+    if (!datos.informante) faltan.push("quién responde");
+    if (faltan.length) {
+      ayuda.textContent = `Falta indicar ${faltan.join(", ")}.`;
+      return;
+    }
+    ayuda.textContent = "";
+    almacen.guardarDatos(datos);
+    window.location.href = "/cribado/cuestionario";
+  });
+  form.dataset.listo = "1";
+</script>
+
+<style>
+  .fuera h1 {
+    outline: none;
+  }
+  [hidden] {
+    display: none !important;
+  }
+</style>

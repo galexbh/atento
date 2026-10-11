@@ -1,16 +1,491 @@
 ---
+import { icono, ilustracion } from "@/components/svg";
 import Base from "@/layouts/Base.astro";
+
+const pasos = [
+  {
+    icono: "escritura",
+    titulo: "Responde con calma",
+    texto: "72 preguntas cortas sobre lo que ves en casa o en la escuela. Unos 10 minutos.",
+  },
+  {
+    icono: "tareas",
+    titulo: "Mira tu resultado",
+    texto: "Al instante, en tu teléfono. Con palabras claras y sin etiquetas.",
+  },
+  {
+    icono: "familia",
+    titulo: "Decide el siguiente paso",
+    texto: "Si vale la pena consultar, te decimos con quién y qué llevar. Puedes guardar un PDF.",
+  },
+];
+
+const faq = [
+  {
+    p: "¿Qué es el TDAH?",
+    r: "Es una condición del desarrollo que hace más difícil mantener la atención, quedarse quieto o pensar antes de actuar. No es falta de educación ni de voluntad. Con apoyo adecuado, los niños y niñas con TDAH van bien en la escuela y en la vida.",
+  },
+  {
+    p: "¿Qué es un cribado y en qué se diferencia de un diagnóstico?",
+    r: "Un cribado es un primer filtro: ordena lo que tú observas y dice si vale la pena consultar. Un diagnóstico lo hace solo un profesional de salud, con entrevista y valoración completa. Atento hace lo primero; nunca lo segundo.",
+  },
+  {
+    p: "¿Lo puede llenar un docente?",
+    r: "Sí, con autorización de la familia. El cuestionario está pensado para madres y padres, pero la mirada del docente es muy valiosa. Al terminar puedes invitar al docente con un código para que responda por su cuenta.",
+  },
+  {
+    p: "¿Qué pasa con mis datos?",
+    r: "No pedimos nombre, correo, teléfono ni dirección. Solo guardamos departamento, municipio, edad, sexo, quién responde y las respuestas, y solo si tú lo autorizas. Se usan de forma agrupada para el mapa nacional.",
+  },
+  {
+    p: "¿Qué hago con el resultado?",
+    r: "Léelo con calma. Si recomienda consultar, habla con el docente y pide cita con un pediatra, psicólogo o psiquiatra infantil. Lleva el PDF: le ahorra tiempo al profesional. Si el resultado es bajo pero sigues preocupado, consulta de todos modos.",
+  },
+  {
+    p: "¿Es gratis?",
+    r: "Sí. Atento es un proyecto personal sin fines de lucro, de código abierto. No hay cuentas, pagos ni publicidad.",
+  },
+];
 ---
 
 <Base
-  titulo="Atento — próximamente"
-  descripcion="Atento: cribado comunitario (no diagnóstico) de TDAH infantil en Honduras."
+  titulo="Atento: cribado gratuito de TDAH en niños"
+  descripcion="Una orientación gratuita y anónima para saber si vale la pena consultar a un profesional por señales de TDAH en niños y niñas de 6 a 12 años. Honduras."
   canonical="/"
 >
-  <h1>Atento — próximamente</h1>
-  <p>
-    Estamos preparando una herramienta comunitaria para orientar a madres, padres, cuidadores y
-    docentes sobre señales de TDAH en niñas y niños de 6 a 12 años.
-  </p>
-  <p>Atento no diagnostica: orienta y sugiere cuándo consultar con un profesional.</p>
+  <section class="hero" aria-labelledby="hero-titulo">
+    <div class="hero__foto" aria-hidden="true">
+      <picture>
+        <source media="(max-width: 48rem)" srcset="/img/familia-lectura-800.webp" />
+        <img
+          src="/img/familia-lectura.webp"
+          alt=""
+          width="1600"
+          height="1067"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </picture>
+    </div>
+    <div class="contenedor contenedor--ancho hero__contenido">
+      <div class="hero__texto">
+        <svg
+          class="hero__simbolo"
+          viewBox="0 0 64 64"
+          width="88"
+          height="88"
+          role="img"
+          aria-labelledby="hero-simbolo-t"
+        >
+          <title id="hero-simbolo-t">Símbolo de Atento</title>
+          <rect class="simbolo__caja" width="64" height="64" rx="16" fill="#ffffff"></rect>
+          <path
+            class="simbolo__trazo"
+            fill="none"
+            stroke="#1f6f8b"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="6"
+            d="m17 47 15-32 15 32"
+            pathLength="1"></path>
+          <circle class="simbolo__punto" cx="32" cy="39" r="5.5" fill="#f2a541"></circle>
+        </svg>
+        <h1 id="hero-titulo">
+          <span class="visualmente-oculto">Atento: </span>
+          Una orientación gratuita y anónima para saber si vale la pena consultar a un profesional
+        </h1>
+        <p class="hero__sub">
+          Para madres, padres, cuidadores y docentes de niñas y niños de <strong>6 a 12 años</strong> en Honduras. Diez minutos. Sin nombre, sin cuenta.
+        </p>
+        <div class="hero__acciones">
+          <a href="/cribado/consentimiento" class="boton boton--primario boton--grande">
+            Empezar el cribado
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg>
+          </a>
+          <span class="hero__tiempo">
+            <Fragment set:html={icono("tiempo")} />
+            Unos 10 minutos
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion" aria-labelledby="que-es">
+    <div class="contenedor contenedor--ancho dos">
+      <div>
+        <h2 id="que-es">Qué es Atento</h2>
+        <p class="grande">
+          Un cuestionario de <strong>cribado</strong>: te ayuda a ordenar lo que observas en tu hijo
+          o hija y a decidir si conviene consultar.
+        </p>
+        <p>
+          Usa la escala NICHQ Vanderbilt, la misma que emplean pediatras en muchos países, con
+          preguntas en español claro. El resultado se calcula en tu teléfono y te lo mostramos al
+          instante.
+        </p>
+      </div>
+      <div class="aviso aviso--importante no-es">
+        <p class="aviso__titulo">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4m0 4h.01"></path></svg>
+          Esto no es un diagnóstico
+        </p>
+        <p>
+          Un resultado alto <strong>no significa que tu hijo o hija tenga TDAH</strong>. Un resultado
+          bajo no lo descarta. Solo un profesional de salud (pediatría, psicología o psiquiatría
+          infantil) puede evaluar y diagnosticar.
+        </p>
+        <p>Atento no es un servicio de urgencia ni sustituye una consulta.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion banda--suave" aria-labelledby="como-funciona">
+    <div class="contenedor contenedor--ancho">
+      <h2 id="como-funciona">Cómo funciona</h2>
+      <ol class="pasos pasos--tres">
+        {
+          pasos.map((p, i) => (
+            <li class="paso">
+              <span class="paso__icono" set:html={icono(p.icono)} />
+              <div>
+                <span class="paso__numero">Paso {i + 1}</span>
+                <h3>{p.titulo}</h3>
+                <p>{p.texto}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="seccion" aria-labelledby="privacidad">
+    <div class="contenedor contenedor--ancho dos dos--invertido">
+      <div class="privacidad">
+        <span class="paso__icono privacidad__icono" set:html={icono("privacidad")} />
+        <h2 id="privacidad">Tu privacidad, en tres frases</h2>
+        <ul class="lista-marcada">
+          <li><strong>Es anónimo.</strong> No guardamos tu IP ni tu ubicación exacta.</li>
+          <li><strong>Sin nombre.</strong> No preguntamos cómo se llama tu hijo o hija, ni tú.</li>
+          <li><strong>Sin cuenta.</strong> No hay registro, contraseña ni correo.</li>
+        </ul>
+        <p><a href="/legal/privacidad">Lee la política de privacidad completa</a></p>
+      </div>
+      <figure class="foto">
+        <picture>
+          <source media="(max-width: 48rem)" srcset="/img/nino-tarea-800.webp" />
+          <img
+            src="/img/nino-tarea.webp"
+            alt="Una niña hace la tarea en un cuaderno, vista desde arriba"
+            width="1600"
+            height="1067"
+            loading="lazy"
+            decoding="async"
+          />
+        </picture>
+      </figure>
+    </div>
+  </section>
+
+  <section class="seccion banda investigacion" aria-labelledby="investigacion">
+    <div class="contenedor contenedor--ancho dos">
+      <div>
+        <h2 id="investigacion">Ayudá a la investigación en Honduras</h2>
+        <p class="grande">
+          Nadie sabe cuántos niños y niñas en Honduras necesitan atención por TDAH. Con tu
+          respuesta anónima, empezamos a saberlo.
+        </p>
+        <p>
+          Si marcás la casilla opcional de investigación, tus respuestas se suman a un mapa por
+          departamento y municipio con datos abiertos. Nunca se publica una respuesta
+          individual: solo cifras de municipios con al menos 5 respuestas.
+        </p>
+        <p class="investigacion__pronto">Próximamente: el mapa nacional.</p>
+      </div>
+      <div class="mapa" set:html={ilustracion("honduras", { clase: "ilustracion" })} />
+    </div>
+  </section>
+
+  <section class="seccion" aria-labelledby="preguntas">
+    <div class="contenedor">
+      <h2 id="preguntas">Preguntas frecuentes</h2>
+      {
+        faq.map((f) => (
+          <details class="plegable">
+            <summary>{f.p}</summary>
+            <p>{f.r}</p>
+          </details>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="seccion cierre" aria-labelledby="cierre-titulo">
+    <div class="contenedor cierre__caja">
+      <div class="cierre__ilus" set:html={ilustracion("bienvenida", { decorativo: true, clase: "ilustracion" })} />
+      <div>
+        <h2 id="cierre-titulo">¿Listo para empezar?</h2>
+        <p>Diez minutos, sin registro. Puedes parar y seguir después: tu avance se guarda en tu teléfono.</p>
+        <a href="/cribado/consentimiento" class="boton boton--primario boton--grande">Empezar el cribado</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="contenedor aviso-salud" aria-label="Aviso de salud">
+    <p>
+      <strong>Aviso de salud.</strong> Atento es un cribado comunitario, no un diagnóstico ni un
+      servicio de urgencia. Si el niño o la niña está en peligro, habla de hacerse daño o hay una
+      emergencia, llama ahora al <strong>911</strong> o acude al centro de salud más cercano.
+      <a href="/legal/aviso-de-salud">Leer el aviso completo</a>.
+    </p>
+  </section>
 </Base>
+
+<style>
+  /* Hero: banda azul con foto y zoom lento */
+  .hero {
+    position: relative;
+    isolation: isolate;
+    background: var(--color-banda);
+    color: var(--color-banda-texto);
+    overflow: hidden;
+    min-height: 32rem;
+    display: flex;
+    align-items: flex-end;
+  }
+  .hero__foto {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+  .hero__foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 60% 40%;
+    animation: zoom-lento 28s linear both;
+    transform-origin: 55% 45%;
+  }
+  .hero__foto::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgb(31 111 139 / 0.25) 0%, rgb(31 111 139 / 0.55) 45%, rgb(24 90 113 / 0.96) 100%);
+  }
+  @keyframes zoom-lento {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.12);
+    }
+  }
+  .hero__contenido {
+    padding-top: 9rem;
+    padding-bottom: var(--espacio-5);
+  }
+  .hero__texto {
+    max-width: 38rem;
+  }
+  .hero h1 {
+    color: #ffffff;
+    font-size: clamp(1.9rem, 1.3rem + 2.6vw, 3rem);
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  }
+  .hero__sub {
+    font-size: 1.15rem;
+    color: #ffffff;
+    margin-bottom: var(--espacio-4);
+  }
+  .hero__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--espacio-3) var(--espacio-4);
+  }
+  .hero__tiempo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+  }
+  .hero__tiempo :global(svg) {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  /* Animación del símbolo al cargar: el trazo de la A se dibuja y el punto ámbar aparece. */
+  .hero__simbolo {
+    display: block;
+    width: 5rem;
+    height: 5rem;
+    margin-bottom: var(--espacio-3);
+    filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.25));
+    animation: simbolo-entra 0.9s var(--facil) both;
+  }
+  .simbolo__trazo {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: simbolo-traza 1.1s var(--facil) 0.25s forwards;
+  }
+  .simbolo__punto {
+    transform-origin: 32px 39px;
+    transform: scale(0);
+    animation: simbolo-punto 0.5s var(--facil) 1.1s forwards;
+  }
+  @keyframes simbolo-entra {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes simbolo-traza {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes simbolo-punto {
+    to {
+      transform: scale(1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero__foto img {
+      animation: none;
+    }
+    .simbolo__trazo {
+      stroke-dashoffset: 0;
+      animation: none;
+    }
+    .simbolo__punto {
+      transform: none;
+      animation: none;
+    }
+    .hero__simbolo {
+      animation: none;
+    }
+  }
+
+  .dos {
+    display: grid;
+    gap: var(--espacio-4);
+    align-items: center;
+  }
+  .no-es {
+    padding: var(--espacio-4);
+  }
+  .no-es .aviso__titulo {
+    font-size: 1.25rem;
+  }
+  .pasos--tres {
+    gap: var(--espacio-4);
+  }
+  .privacidad__icono {
+    margin-bottom: var(--espacio-3);
+  }
+  .lista-marcada {
+    list-style: none;
+    padding: 0;
+    font-size: 1.1rem;
+  }
+  .lista-marcada li {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: var(--espacio-2);
+  }
+  .lista-marcada li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.45em;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: var(--color-verde);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e2a32' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><path d='m5 12 5 5 9-10'/></svg>");
+    background-size: 70%;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .foto {
+    margin: 0;
+  }
+  .foto img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radio-grande);
+    box-shadow: var(--sombra-2);
+  }
+  .investigacion h2 {
+    color: inherit;
+  }
+  .investigacion__pronto {
+    display: inline-block;
+    font-weight: 700;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    max-width: none;
+  }
+  .mapa {
+    --c-mapa-relleno: rgb(255 255 255 / 0.18);
+    --c-mapa-borde: #ffffff;
+  }
+  .cierre__caja {
+    display: grid;
+    gap: var(--espacio-4);
+    align-items: center;
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    padding: var(--espacio-4);
+  }
+  .cierre__ilus {
+    max-width: 18rem;
+    margin-inline: auto;
+  }
+  .aviso-salud {
+    font-size: 0.95rem;
+    color: var(--color-texto-suave);
+    padding-bottom: var(--espacio-3);
+  }
+  .aviso-salud p {
+    max-width: none;
+    margin: 0;
+  }
+
+  @media (min-width: 48rem) {
+    .hero {
+      min-height: 36rem;
+    }
+    .hero__contenido {
+      padding-top: 11rem;
+      padding-bottom: var(--espacio-6);
+    }
+    .dos {
+      grid-template-columns: 1.1fr 1fr;
+      gap: var(--espacio-5);
+    }
+    .dos--invertido > :first-child {
+      order: 2;
+    }
+    .pasos--tres {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .paso {
+      grid-template-columns: 1fr;
+    }
+    .cierre__caja {
+      grid-template-columns: 1fr 1.6fr;
+      padding: var(--espacio-5);
+    }
+  }
+</style>

@@ -1,0 +1,47 @@
+---
+import Legal from "@/layouts/Legal.astro";
+
+/**
+ * Documentos legales renderizados desde `src/content/legal/*.md` (copias de docs/03-legal).
+ * Rutas: /legal/terminos, /legal/privacidad, /legal/aviso-de-salud, /legal/cookies,
+ * /legal/accesibilidad, /legal/creditos, /legal/datos-abiertos.
+ */
+interface ModuloMd {
+  frontmatter: { titulo: string; version?: string };
+  Content: (props: Record<string, unknown>) => unknown;
+  getHeadings: () => { depth: number; slug: string; text: string }[];
+}
+
+const DESCRIPCIONES: Record<string, string> = {
+  terminos: "Reglas de uso de Atento, licencias y limitación de responsabilidad.",
+  privacidad: "Qué datos trata Atento, para qué, dónde se guardan y cómo ejercer tus derechos.",
+  "aviso-de-salud":
+    "Atento es un cribado comunitario, no un diagnóstico ni un servicio de urgencia.",
+  cookies: "Inventario del almacenamiento local y por qué Atento no usa cookies de rastreo.",
+  accesibilidad: "Compromiso de accesibilidad WCAG 2.1 AA de Atento y cómo reportar una barrera.",
+  creditos: "Créditos de la escala NICHQ Vanderbilt, código, datos, mapas, fotos e ilustraciones.",
+  "datos-abiertos": "Qué publica Atento como datos abiertos, con qué licencia y cómo citarlo.",
+};
+
+const modulos = import.meta.glob("/src/content/legal/*.md", { eager: true }) as Record<
+  string,
+  ModuloMd
+>;
+
+const { slug } = Astro.params;
+const clave = Object.keys(modulos).find((k) => k.endsWith(`/${slug}.md`));
+if (!slug || !clave || !(slug in DESCRIPCIONES)) {
+  return new Response(null, { status: 404 });
+}
+const doc = modulos[clave] as ModuloMd;
+const Content = doc.Content;
+---
+
+<Legal
+  titulo={doc.frontmatter.titulo}
+  descripcion={DESCRIPCIONES[slug] as string}
+  version={doc.frontmatter.version}
+  encabezados={doc.getHeadings()}
+>
+  <Content />
+</Legal>

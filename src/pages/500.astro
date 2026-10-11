@@ -1,0 +1,39 @@
+---
+import { ilustracion } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+---
+
+<Base titulo="Algo salió mal" descripcion="Atento tuvo un error inesperado." noindex>
+  <section class="contenedor estado">
+    <div class="estado__ilus" set:html={ilustracion("error", { decorativo: true, clase: "ilustracion" })} />
+    <h1>Algo salió mal de nuestro lado</h1>
+    <p class="grande">
+      No es culpa tuya. Si estabas respondiendo el cuestionario, tu avance sigue guardado en tu
+      teléfono: vuelve a intentarlo en un momento.
+    </p>
+    <p class="estado__acciones">
+      <a href="/" class="boton boton--primario">Ir al inicio</a>
+      <a href="/contacto" class="boton boton--secundario">Avisarnos del error</a>
+    </p>
+  </section>
+</Base>
+
+<style>
+  .estado {
+    text-align: center;
+    padding-block: var(--espacio-5);
+  }
+  .estado__ilus {
+    max-width: 20rem;
+    margin: 0 auto var(--espacio-4);
+  }
+  .estado p {
+    margin-inline: auto;
+  }
+  .estado__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--espacio-3);
+  }
+</style>

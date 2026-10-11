@@ -15,6 +15,9 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 const CODIGO_VINCULO = /^[A-Za-z0-9]{8}$/;
 
+/** Instrumento de los ítems adicionales opcionales (`respuestasAtento`). */
+const INSTRUMENTO_ATENTO = "atento-0.1";
+
 const EsquemaRespuestas = z.record(z.string(), z.number().int());
 
 export const EsquemaEnvio = z
@@ -24,6 +27,11 @@ export const EsquemaEnvio = z
       message: "instrumentoId desconocido",
     }),
     respuestas: EsquemaRespuestas,
+    /**
+     * Ítems adicionales del instrumento "atento-0.1" (A01–A18), intercalados en el
+     * cuestionario público. Opcional; se validan contra ese instrumento.
+     */
+    respuestasAtento: EsquemaRespuestas.optional(),
     departamento: z.string().regex(/^\d{2}$/, "departamento debe tener 2 dígitos"),
     municipio: z.string().regex(/^\d{4}$/, "municipio debe tener 4 dígitos"),
     edadAnios: z.number().int().min(6).max(12),
@@ -81,6 +89,29 @@ export const EsquemaEnvio = z
           path: ["respuestas", itemId],
           message: `valor fuera de rango (${rango.min}–${rango.max})`,
         });
+      }
+    }
+    if (envio.respuestasAtento) {
+      const atento = obtenerInstrumento(INSTRUMENTO_ATENTO);
+      const itemsAtento = new Map(atento.items.map((i) => [i.id, i]));
+      for (const [itemId, valor] of Object.entries(envio.respuestasAtento)) {
+        const item = itemsAtento.get(itemId);
+        if (!item) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["respuestasAtento", itemId],
+            message: `el ítem "${itemId}" no pertenece al instrumento ${INSTRUMENTO_ATENTO}`,
+          });
+          continue;
+        }
+        const rango = RANGO_VALOR[item.tipo];
+        if (valor < rango.min || valor > rango.max) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["respuestasAtento", itemId],
+            message: `valor fuera de rango (${rango.min}–${rango.max})`,
+          });
+        }
       }
     }
     if (envio.itemAbandono !== undefined && !items.has(envio.itemAbandono)) {

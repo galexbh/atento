@@ -1,0 +1,56 @@
+---
+import { ilustracion } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+
+const asunto = encodeURIComponent("Retroalimentación sobre Atento");
+---
+
+<Base titulo="Contacto" descripcion="Escríbenos a info@galexbh.dev con dudas, sugerencias o reportes sobre Atento.">
+  <section class="contenedor contacto">
+    <div class="contacto__ilus" set:html={ilustracion("gracias", { decorativo: true, clase: "ilustracion" })} />
+    <div>
+      <h1>Contacto</h1>
+      <p class="grande">
+        Atento es un proyecto personal sin fines de lucro. Leemos todos los mensajes.
+      </p>
+      <p>
+        Dudas, sugerencias, reportes de errores o de barreras de accesibilidad, solicitudes de
+        borrado de una respuesta (con tu código de vínculo) o propuestas de colaboración académica:
+      </p>
+      <p class="contacto__correo">
+        <a href="mailto:info@galexbh.dev">info@galexbh.dev</a>
+      </p>
+      <p>
+        <a href={`mailto:info@galexbh.dev?subject=${asunto}`} class="boton boton--primario">
+          Enviar retroalimentación
+        </a>
+      </p>
+      <p class="suave">
+        No envíes datos de salud de tu hijo o hija por correo: no los necesitamos y no podemos
+        darte una valoración clínica. Si hay una emergencia, llama al 911.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .contacto {
+    display: grid;
+    gap: var(--espacio-4);
+    padding-block: var(--espacio-5);
+    align-items: center;
+  }
+  .contacto__ilus {
+    max-width: 18rem;
+  }
+  .contacto__correo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 48rem) {
+    .contacto {
+      grid-template-columns: 1fr 2fr;
+    }
+  }
+</style>
