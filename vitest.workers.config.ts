@@ -16,7 +16,14 @@ export default defineConfig({
         miniflare: {
           // Binding solo para pruebas: lista de migraciones que aplica setup.ts.
           // TURNSTILE_SECRET de prueba: obliga a pasar por siteverify (que las pruebas mockean).
-          bindings: { TEST_MIGRATIONS: migrations, TURNSTILE_SECRET: "secreto-de-prueba" },
+          // ENTORNO se fija aquí (y no se toma de .dev.vars) para probar el comportamiento de
+          // producción: Turnstile y RATE_SALT obligatorios (RATE_SALT falta -> 503).
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            ENTORNO: "produccion",
+            TURNSTILE_SECRET: "secreto-de-prueba",
+            RATE_SALT: "sal-de-prueba",
+          },
         },
       };
     }),

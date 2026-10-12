@@ -30,7 +30,7 @@ function fila(parcial: Partial<FilaRespuestaNueva>): FilaRespuestaNueva {
     pos_desempeno: 0,
     nivel: "bajo",
     consentimiento_investigacion: 1,
-    version_consentimiento: "v1",
+    version_consentimiento: "2026-10-11",
     version_instrumento: "vanderbilt-padres-es-1.0",
     duracion_segundos: 300,
     completado: 1,

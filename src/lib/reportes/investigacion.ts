@@ -14,7 +14,7 @@ export interface PerfilGrupo {
 }
 
 export interface ReporteInvestigacion {
-  n: number;
+  n: Celda;
   consentimiento: Proporcion;
   perfiles: PerfilGrupo[];
 }
@@ -67,5 +67,5 @@ export async function reporteInvestigacion(
       positivo: proporcion(positivos, n),
     };
   });
-  return { n: total, consentimiento: proporcion(conCons, total), perfiles };
+  return { n: conteo(total), consentimiento: proporcion(conCons, total), perfiles };
 }

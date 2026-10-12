@@ -4,7 +4,8 @@
  * - `atento:consentimiento`: versión del consentimiento aceptada y casilla de investigación.
  * - `atento:datos`: departamento, municipio, edad, sexo e informante.
  * - `atento:progreso`: respuestas en curso, página actual y segundos acumulados.
- * - `atento:resultado`: solo puntajes/nivel (nunca los ítems) para la página de resultado.
+ * - `atento:resultado`: solo puntajes/nivel (nunca los ítems) para la página de resultado;
+ *   caduca a los 30 días (se borra al leerlo).
  * - `atento:tema`: preferencia de modo claro/oscuro (ver tema.ts).
  *
  * Todas las lecturas toleran almacenamiento no disponible (modo privado, cuota) devolviendo null.
@@ -12,6 +13,11 @@
 import type { Escala, EscalaAlerta, Nivel } from "@/lib/puntuacion/tipos";
 
 export const VERSION_CONSENTIMIENTO = "2026-10-11";
+
+/** Días que se conserva `atento:resultado` en el dispositivo. */
+export const DIAS_CADUCIDAD_RESULTADO = 30;
+/** Mensaje al service worker para vaciar la cola de envíos pendientes (IndexedDB `atento-cola`). */
+export const MENSAJE_SW_VACIAR_COLA = "atento:vaciar-cola";
 
 export const CLAVES = {
   consentimiento: "atento:consentimiento",
@@ -105,12 +111,58 @@ export const almacen = {
   leerProgreso: () => leer<Progreso>(CLAVES.progreso),
   guardarProgreso: (p: Progreso) => escribir(CLAVES.progreso, p),
   borrarProgreso: () => borrar(CLAVES.progreso),
-  leerResultado: () => leer<ResultadoGuardado>(CLAVES.resultado),
+  leerResultado: (ahora = Date.now()): ResultadoGuardado | null => {
+    const r = leer<ResultadoGuardado>(CLAVES.resultado);
+    if (!r) return null;
+    const fecha = Date.parse(r.fecha);
+    if (Number.isNaN(fecha) || ahora - fecha > DIAS_CADUCIDAD_RESULTADO * 86_400_000) {
+      borrar(CLAVES.resultado);
+      return null;
+    }
+    return r;
+  },
   guardarResultado: (r: ResultadoGuardado) => escribir(CLAVES.resultado, r),
   borrarTodo: () => {
     for (const clave of Object.values(CLAVES)) borrar(clave);
   },
 };
+
+/**
+ * "Borrar mis datos de este dispositivo": vacía localStorage (consentimiento, datos, progreso,
+ * resultado) y pide al service worker que descarte la cola de envíos pendientes. No puede borrar
+ * lo ya enviado al servidor (para eso está el código de vínculo).
+ */
+export async function borrarDatosDelDispositivo(): Promise<void> {
+  almacen.borrarTodo();
+  try {
+    if ("serviceWorker" in navigator) {
+      const registro = await navigator.serviceWorker.getRegistration();
+      registro?.active?.postMessage(MENSAJE_SW_VACIAR_COLA);
+    }
+  } catch {
+    // Sin service worker: no hay cola que vaciar.
+  }
+  try {
+    indexedDB.deleteDatabase("atento-cola");
+  } catch {
+    // IndexedDB no disponible.
+  }
+}
+
+/** Conecta un botón o enlace de "borrar mis datos" (atributo `data-borrar-datos`). */
+export function iniciarBorrarDatos(raiz: ParentNode = document): void {
+  for (const el of raiz.querySelectorAll<HTMLElement>("[data-borrar-datos]")) {
+    el.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      const ok = window.confirm(
+        "Se borrarán de este dispositivo el consentimiento, los datos del cuestionario, el progreso y el resultado. ¿Continuar?",
+      );
+      if (!ok) return;
+      await borrarDatosDelDispositivo();
+      window.location.href = "/?datos=borrados";
+    });
+  }
+}
 
 /** Código de vínculo: 8 caracteres alfanuméricos aleatorios (sin relación con ningún dato). */
 export function generarCodigoVinculo(): string {

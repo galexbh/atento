@@ -6,7 +6,13 @@ import {
   rolDeCorreo,
   verificarJwtAccess,
 } from "@/lib/admin/acceso";
-import { crearSesion, NOMBRE_COOKIE, verificarContrasena } from "@/lib/admin/password";
+import {
+  crearSesion,
+  hashIp,
+  NOMBRE_COOKIE,
+  verificarContrasena,
+  verificarSesion,
+} from "@/lib/admin/password";
 import { generarFilas, SQL_INSERT, valoresInsert } from "@/lib/admin/sintetico";
 import { CONTRASENA_PRUEBA } from "./admin-constantes";
 
@@ -17,6 +23,7 @@ beforeEach(async () => {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM respuestas"),
     env.DB.prepare("DELETE FROM auditoria_admin"),
+    env.DB.prepare("DELETE FROM configuracion WHERE clave = 'sesiones_no_antes_de'"),
   ]);
 });
 const worker = exports.default;
@@ -76,12 +83,57 @@ describe("autenticación del panel (modo password)", () => {
     const setCookie = r.headers.get("Set-Cookie") ?? "";
     expect(setCookie).toContain("HttpOnly");
     expect(setCookie).toContain("SameSite=Strict");
-    expect(setCookie).toContain("Path=/admin");
+    // M4: Path=/ para que /api/admin/* reciba la cookie (antes Path=/admin la excluía).
+    expect(setCookie).toMatch(/;\s*Path=\/(;|$)/);
+    expect(setCookie).not.toContain("Path=/admin");
     const cookie = setCookie.split(";")[0] as string;
     const reporte = await get("/api/admin/reporte/resumen?periodo=2026", cookie);
     expect(reporte.status).toBe(200);
     const cuerpo = await reporte.json<{ meta: { reporte: string }; datos: unknown }>();
     expect(cuerpo.meta.reporte).toBe("resumen");
+    const codebook = await get("/api/admin/exportar?tipo=codebook", cookie);
+    expect(codebook.status).toBe(200);
+  });
+
+  it("M6: la sesión lleva iat y 'cerrar todas las sesiones' invalida las anteriores", async () => {
+    const cookie = await cookieAdmin();
+    const sesion = await verificarSesion(
+      env.ADMIN_SESSION_SECRET as string,
+      cookie.slice(NOMBRE_COOKIE.length + 1),
+    );
+    expect(typeof sesion?.iat).toBe("number");
+    expect((await get("/api/admin/reporte/resumen", cookie)).status).toBe(200);
+    // Las sesiones se emiten con resolución de segundos: espera para que el corte sea posterior.
+    await new Promise((r) => setTimeout(r, 1100));
+    const cerrar = await worker.fetch(
+      new Request(`${BASE}/api/admin/sistema`, {
+        method: "POST",
+        headers: { Cookie: cookie, Accept: "application/json" },
+        body: new URLSearchParams({ accion: "cerrar_sesiones" }),
+      }),
+    );
+    expect(cerrar.status).toBe(200);
+    expect((await get("/api/admin/reporte/resumen", cookie)).status).toBe(401);
+    const fila = await env.DB.prepare(
+      "SELECT valor FROM configuracion WHERE clave = 'sesiones_no_antes_de'",
+    ).first<{ valor: string }>();
+    expect(Number(fila?.valor)).toBeGreaterThan(0);
+    const auditoria = await env.DB.prepare(
+      "SELECT accion FROM auditoria_admin WHERE accion = 'cerrar_sesiones'",
+    ).all();
+    expect(auditoria.results).toHaveLength(1);
+    // Una sesión nueva vuelve a funcionar.
+    await new Promise((r) => setTimeout(r, 1100));
+    const nueva = await cookieAdmin();
+    expect((await get("/api/admin/reporte/resumen", nueva)).status).toBe(200);
+  });
+
+  it("M3: el hash de IP de los intentos usa HMAC con sal (distinto por sal)", async () => {
+    const a = await hashIp("203.0.113.5", "sal-1");
+    const b = await hashIp("203.0.113.5", "sal-2");
+    expect(a).not.toBe(b);
+    expect(a).toHaveLength(32);
+    expect(await hashIp("203.0.113.5", "sal-1")).toBe(a);
   });
 
   it("contraseña incorrecta redirige con error y bloquea tras 5 intentos", async () => {
@@ -123,6 +175,61 @@ describe("autenticación del panel (modo password)", () => {
 });
 
 describe("roles", () => {
+  it("M2: investigador no puede cruzar municipio con edad, sexo, informante ni mes; se audita", async () => {
+    await sembrar(60, 9);
+    const cookie = await cookieInvestigador();
+    expect(
+      (await get("/api/admin/reporte/geografia?periodo=2026&municipio=0801", cookie)).status,
+    ).toBe(200);
+    for (const q of [
+      "municipio=0801&sexo=F",
+      "municipio=0801&edadMin=7",
+      "municipio=0801&edadMax=9",
+      "municipio=0801&informante=madre",
+      "municipio=0801&periodo=2026-03",
+    ]) {
+      const r = await get(`/api/admin/reporte/demografia?${q}`, cookie);
+      expect(r.status, q).toBe(403);
+    }
+    // El admin sí puede.
+    const admin = await cookieAdmin();
+    expect((await get("/api/admin/reporte/demografia?municipio=0801&sexo=F", admin)).status).toBe(
+      200,
+    );
+    const auditoria = await env.DB.prepare(
+      "SELECT usuario, filtros FROM auditoria_admin WHERE accion = 'consulta' ORDER BY id",
+    ).all<{ usuario: string; filtros: string }>();
+    expect(auditoria.results.length).toBe(2);
+    expect(auditoria.results[0]?.usuario).toBe("investigador@ejemplo.org");
+    expect(JSON.parse(auditoria.results[0]?.filtros ?? "{}")).toMatchObject({
+      reporte: "geografia",
+      municipio: "0801",
+    });
+  });
+
+  it("M2: los totales de resumen, volumen, calidad, investigación y comorbilidad se suprimen con n < 5", async () => {
+    await sembrar(3, 21);
+    const cookie = await cookieAdmin();
+    const celda = { n: 0, suprimido: true };
+    const resumen = await (await get("/api/admin/reporte/resumen?periodo=acumulado", cookie)).json<{
+      datos: { nTotalHistorico: unknown; nPeriodo: unknown };
+    }>();
+    expect(resumen.datos.nTotalHistorico).toEqual(celda);
+    expect(resumen.datos.nPeriodo).toEqual(celda);
+    const volumen = await (await get("/api/admin/reporte/volumen?periodo=acumulado", cookie)).json<{
+      datos: { totales: { total: unknown; completadas: unknown; abandonadas: unknown } };
+    }>();
+    expect(volumen.datos.totales.total).toEqual(celda);
+    expect(volumen.datos.totales.completadas).toEqual(celda);
+    expect(volumen.datos.totales.abandonadas).toEqual(celda);
+    for (const nombre of ["calidad", "investigacion", "comorbilidad"]) {
+      const r = await (await get(`/api/admin/reporte/${nombre}?periodo=acumulado`, cookie)).json<{
+        datos: { n: unknown };
+      }>();
+      expect(r.datos.n, nombre).toEqual(celda);
+    }
+  });
+
   it("investigador recibe 403 en microdatos y 200 en agregados", async () => {
     const cookie = await cookieInvestigador();
     expect((await get("/api/admin/exportar?tipo=microdatos", cookie)).status).toBe(403);
@@ -319,11 +426,70 @@ describe("reportes y exportaciones con datos sintéticos", () => {
     expect(recodificadas.length).toBeGreaterThan(0);
     for (const d of recodificadas) expect(d.municipio).toBeNull();
     for (const d of datos) expect(String(d.mes)).toMatch(/^\d{4}-\d{2}$/);
+    // A2: id seudonimizado (16 hex, no UUID) y k-anonimato sobre (depto, edad, sexo, informante).
+    const idsOriginales = new Set(filas.map((f) => f.id));
+    for (const d of datos) {
+      expect(String(d.id)).toMatch(/^[0-9a-f]{16}$/);
+      expect(idsOriginales.has(String(d.id))).toBe(false);
+      expect(["6-8", "9-10", "11-12"]).toContain(d.edad_tramo);
+      if (d.k_generalizado === 0) expect(typeof d.edad_anios).toBe("number");
+      if ((d.k_generalizado as number) >= 1) expect(d.edad_anios).toBeNull();
+      if (d.k_generalizado === 2) {
+        expect(d.sexo).toBeNull();
+        expect(d.informante).toBeNull();
+      }
+    }
+    expect(datos.filter((d) => (d.k_generalizado as number) >= 1).length).toBeGreaterThan(0);
+    // Ningún cruce visible (depto, edad, sexo, informante) con n < 5 en el universo del periodo.
+    const universo = await env.DB.prepare(
+      "SELECT departamento, edad_anios, sexo, informante, COUNT(*) AS n FROM respuestas WHERE completado = 1 GROUP BY 1, 2, 3, 4",
+    ).all<{
+      departamento: string;
+      edad_anios: number;
+      sexo: string;
+      informante: string;
+      n: number;
+    }>();
+    const conteo = new Map(
+      universo.results.map((u) => [
+        `${u.departamento}|${u.edad_anios}|${u.sexo}|${u.informante}`,
+        u.n,
+      ]),
+    );
+    for (const d of datos.filter((x) => x.k_generalizado === 0)) {
+      const k = `${d.departamento}|${d.edad_anios}|${d.sexo}|${d.informante}`;
+      expect(conteo.get(k) ?? 0, k).toBeGreaterThanOrEqual(5);
+    }
+    // El umbral de municipio se calcula sobre todo el periodo: filtrar por departamento no lo baja.
+    const porDepto = await get(
+      "/api/admin/exportar?tipo=microdatos&formato=json&periodo=acumulado&departamento=08",
+      cookie,
+    );
+    expect(porDepto.status).toBe(200);
+    const { datos: datos08 } = await porDepto.json<{ datos: Array<Record<string, unknown>> }>();
+    const visiblesTodo = new Set(
+      datos.filter((d) => d.municipio !== null).map((d) => String(d.municipio)),
+    );
+    for (const d of datos08) {
+      if (d.municipio !== null) expect(visiblesTodo.has(String(d.municipio))).toBe(true);
+    }
+    // Filtros finos y periodos no anuales -> 400.
+    for (const q of [
+      "municipio=0801",
+      "sexo=F",
+      "edadMin=7",
+      "informante=madre",
+      "periodo=2026-03",
+    ]) {
+      const r = await get(`/api/admin/exportar?tipo=microdatos&${q}`, cookie);
+      expect(r.status, q).toBe(400);
+      expect(((await r.json()) as { error: string }).error).toContain("microdatos");
+    }
 
     const auditoria = await env.DB.prepare(
       "SELECT usuario, accion, filtros, filas FROM auditoria_admin WHERE accion = 'exportar_microdatos' ORDER BY id",
     ).all<{ usuario: string; accion: string; filtros: string; filas: number }>();
-    expect(auditoria.results).toHaveLength(2);
+    expect(auditoria.results).toHaveLength(3); // csv, json y json por departamento;
     expect(auditoria.results[0]?.filas).toBe(esperadas);
     expect(JSON.parse(auditoria.results[0]?.filtros ?? "{}")).toMatchObject({
       periodo: "acumulado",
@@ -352,6 +518,39 @@ describe("reportes y exportaciones con datos sintéticos", () => {
     expect(acciones).toContain("exportar_agregados");
     expect(acciones).toContain("exportar_codebook");
     expect(auditoria.results.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("B7: trigger de validación en respuestas (migración 0003)", () => {
+  it("rechaza items no JSON, codigo_vinculo de otra longitud y version_consentimiento sin formato", async () => {
+    const [fila] = generarFilas({ n: 1, semilla: 5 });
+    if (!fila) throw new Error("sin fila");
+    const insertar = (f: typeof fila) =>
+      env.DB.prepare(SQL_INSERT)
+        .bind(...valoresInsert(f))
+        .run();
+    await expect(insertar({ ...fila, id: crypto.randomUUID() })).resolves.toBeTruthy();
+    await expect(
+      insertar({ ...fila, id: crypto.randomUUID(), version_consentimiento: "v1" }),
+    ).rejects.toThrow(/version_consentimiento/);
+    const valores = valoresInsert({ ...fila, id: crypto.randomUUID() });
+    valores[8] = "{no es json";
+    await expect(
+      env.DB.prepare(SQL_INSERT)
+        .bind(...valores)
+        .run(),
+    ).rejects.toThrow(/items/);
+    const minimo =
+      "INSERT INTO respuestas (id, creado_en, periodo_anio, departamento, municipio, edad_anios, items, version_consentimiento, version_instrumento, codigo_vinculo) VALUES (?, '2026-01-01', 2026, '08', '0801', 8, '{}', '2026-10-11', 'x', ?)";
+    await expect(env.DB.prepare(minimo).bind(crypto.randomUUID(), "abc").run()).rejects.toThrow(
+      /codigo_vinculo/,
+    );
+    await expect(
+      env.DB.prepare(minimo).bind(crypto.randomUUID(), "ABCD1234").run(),
+    ).resolves.toBeTruthy();
+    await expect(
+      env.DB.prepare(minimo).bind(crypto.randomUUID(), null).run(),
+    ).resolves.toBeTruthy();
   });
 });
 

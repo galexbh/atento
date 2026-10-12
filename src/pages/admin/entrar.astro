@@ -10,6 +10,7 @@ const usuario = await autenticar(Astro.request);
 if (usuario) return Astro.redirect("/admin", 302);
 const modo = modoAdmin();
 const error = Astro.url.searchParams.get("error");
+const msg = Astro.url.searchParams.get("msg");
 const volverBruto = Astro.url.searchParams.get("volver") ?? "/admin";
 const volver = /^\/admin(\/[\w\-/?=&%.]*)?$/.test(volverBruto) ? volverBruto : "/admin";
 const MENSAJES: Record<string, string> = {
@@ -25,6 +26,7 @@ Astro.response.status = 401;
       <>
         <p>Acceso de respaldo con contraseña única (modo <code>password</code>). La sesión dura 8 horas.</p>
         {error && MENSAJES[error] && <p class="aviso" role="alert">{MENSAJES[error]}</p>}
+        {msg === "sesiones-cerradas" && <p class="aviso" role="status">Todas las sesiones quedaron cerradas. Vuelve a entrar.</p>}
         <form method="post" action="/admin/entrar" class="entrar__form">
           <input type="hidden" name="volver" value={volver} />
           <label for="contrasena">Contraseña</label>

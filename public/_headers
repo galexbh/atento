@@ -1,0 +1,17 @@
+# Cabeceras para los activos estáticos servidos por Cloudflare Workers Static Assets
+# (mismo formato que Cloudflare Pages: ruta y, debajo, cabeceras indentadas).
+# Las respuestas generadas por el Worker (páginas, /api) reciben sus cabeceras en src/middleware.ts.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+
+# SVG e imágenes: sin scripts aunque se abran directamente en el navegador.
+/ilustraciones/*
+  Content-Security-Policy: sandbox
+
+/marca/*
+  Content-Security-Policy: sandbox
+
+# GeoJSON (cambia solo con el catálogo): un día en navegador.
+/geo/*
+  Cache-Control: public, max-age=86400

@@ -24,6 +24,7 @@ const anio = new Date().getFullYear();
           <li><a href="/legal/accesibilidad">Accesibilidad</a></li>
           <li><a href="/legal/datos-abiertos">Datos abiertos</a></li>
           <li><a href="/legal/creditos">Créditos y licencias</a></li>
+          <li><a href="/legal/privacidad#borrar" data-borrar-datos>Borrar mis datos de este dispositivo</a></li>
         </ul>
       </nav>
       <nav aria-label="Proyecto">
@@ -41,6 +42,11 @@ const anio = new Date().getFullYear();
     </p>
   </div>
 </footer>
+
+<script>
+  import { iniciarBorrarDatos } from "@/lib/cliente/almacen";
+  iniciarBorrarDatos();
+</script>
 
 <style>
   .pie {

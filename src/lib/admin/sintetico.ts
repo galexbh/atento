@@ -169,7 +169,7 @@ export function generarFilas(opciones: OpcionesSinteticas): FilaSintetica[] {
       pos,
       nivel: completado ? resultado.nivel : "bajo",
       consentimiento_investigacion: rand() < 0.65 ? 1 : 0,
-      version_consentimiento: "2026-10",
+      version_consentimiento: "2026-10-11",
       version_instrumento: conAtento ? "vanderbilt-padres-es-1.0+atento-0.1" : vanderbilt.id,
       duracion_segundos:
         rand() < 0.05

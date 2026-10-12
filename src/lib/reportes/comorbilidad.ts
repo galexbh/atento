@@ -6,7 +6,7 @@ import { type Celda, conteo, type Proporcion, proporcion } from "./supresion";
 export type EscalaSintoma = (typeof ESCALAS_SINTOMAS)[number];
 
 export interface ReporteComorbilidad {
-  n: number;
+  n: Celda;
   escalas: readonly EscalaSintoma[];
   /** matriz[a][b] = n con a y b positivas (diagonal = n positivos de a). */
   matriz: Record<EscalaSintoma, Record<EscalaSintoma, Celda>>;
@@ -57,5 +57,5 @@ export async function reporteComorbilidad(db: Db, filtros: Filtros): Promise<Rep
     const k = indice.get(cantidad) ?? 0;
     return { cantidad, n: conteo(k), pct: proporcion(k, n) };
   });
-  return { n, escalas: ESCALAS_SINTOMAS, matriz, pct, porCantidad };
+  return { n: conteo(n), escalas: ESCALAS_SINTOMAS, matriz, pct, porCantidad };
 }

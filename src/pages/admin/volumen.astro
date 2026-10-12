@@ -4,7 +4,7 @@ import Barras from "@/components/admin/Barras.astro";
 import Cifra from "@/components/admin/Cifra.astro";
 import Lineas from "@/components/admin/Lineas.astro";
 import Admin from "@/layouts/Admin.astro";
-import { fmtCelda, fmtEntero, fmtPct } from "@/lib/admin/formato";
+import { fmtCelda, fmtPct } from "@/lib/admin/formato";
 import { protegerPagina } from "@/lib/admin/proteger";
 import { parsearFiltros } from "@/lib/reportes/filtros";
 import { type Granularidad, reporteVolumen } from "@/lib/reportes/volumen";
@@ -24,9 +24,9 @@ const enlace = (gr: Granularidad) => {
 
 <Admin titulo="Volumen de respuestas" usuario={auth} filtros={filtros} activo="volumen">
   <section class="rejilla" aria-label="Totales">
-    <Cifra etiqueta="Iniciadas" valor={fmtEntero(datos.totales.total)} />
-    <Cifra etiqueta="Completadas" valor={fmtEntero(datos.totales.completadas)} />
-    <Cifra etiqueta="Abandonadas" valor={fmtEntero(datos.totales.abandonadas)} />
+    <Cifra etiqueta="Iniciadas" valor={fmtCelda(datos.totales.total)} />
+    <Cifra etiqueta="Completadas" valor={fmtCelda(datos.totales.completadas)} />
+    <Cifra etiqueta="Abandonadas" valor={fmtCelda(datos.totales.abandonadas)} />
     <Cifra etiqueta="Completitud" valor={fmtPct(datos.totales.completitud)} />
   </section>
   <section class="panel">

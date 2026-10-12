@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import type { APIRoute } from "astro";
 import { protegerApi, registrarAuditoria } from "@/lib/admin/proteger";
+import { fechaUtc } from "@/lib/api/http";
 import { esNombreReporte, type NombreReporte, reporteConMeta } from "@/lib/reportes";
 import {
   aCsv,
@@ -9,6 +10,7 @@ import {
   filasDeReporte,
   generarCodebook,
   nombreArchivo,
+  validarFiltrosMicrodatos,
 } from "@/lib/reportes/exportar";
 import { parsearFiltros } from "@/lib/reportes/filtros";
 
@@ -17,6 +19,7 @@ import { parsearFiltros } from "@/lib/reportes/filtros";
  *
  * - agregados: cualquier rol; el reporte indicado (por defecto geografia).
  * - microdatos: solo admin; solo respuestas con consentimiento; anonimizados (ver exportar.ts).
+ *   Solo admite periodo anual o acumulado, departamento y versionInstrumento (400 si hay otros).
  * - codebook: diccionario de variables en Markdown.
  * Toda exportación queda en auditoria_admin.
  */
@@ -41,13 +44,21 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   if (tipo === "microdatos") {
-    const filas = await exportarMicrodatos(env.DB, filtros);
+    const motivo = validarFiltrosMicrodatos(filtros);
+    if (motivo) return Response.json({ error: motivo }, { status: 400 });
+    const secreto = env.ADMIN_SESSION_SECRET || env.ADMIN_PASSWORD_HASH;
+    if (!secreto) {
+      console.error("exportar_microdatos: falta ADMIN_SESSION_SECRET para seudonimizar ids");
+      return Response.json({ error: "configuracion" }, { status: 503 });
+    }
+    const fecha = fechaUtc();
+    const filas = await exportarMicrodatos(env.DB, filtros, { secreto, fecha });
     await registrarAuditoria(auth, "exportar_microdatos", { ...filtros, formato }, filas.length);
     const nombre = nombreArchivo("microdatos", filtros.periodo, formato);
     if (formato === "json") {
       return descargar(
         JSON.stringify({
-          meta: { periodo: filtros.periodo, filtros, filas: filas.length },
+          meta: { periodo: filtros.periodo, filtros, filas: filas.length, descargadoEn: fecha },
           datos: filas,
         }),
         nombre,

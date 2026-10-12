@@ -10,9 +10,13 @@
 //   pnpm exec wrangler kv namespace create CACHE                  -> id en kv_namespaces (raíz)
 //   pnpm exec wrangler kv namespace create CACHE --env preview    -> id en env.preview.kv_namespaces
 //
-//   # Secreto de Turnstile (nunca va en este archivo ni en vars)
-//   pnpm exec wrangler secret put TURNSTILE_SECRET
-//   pnpm exec wrangler secret put TURNSTILE_SECRET --env preview
+//   # Secretos (nunca van en este archivo ni en vars); repetir con `--env preview`:
+//   pnpm exec wrangler secret put TURNSTILE_SECRET        # clave real de Turnstile (obligatoria fuera de local)
+//   pnpm exec wrangler secret put RATE_SALT               # sal del HMAC de IP (obligatoria en producción: sin ella
+//                                                         #   /api/respuesta responde 503). P. ej. `openssl rand -hex 32`
+//   pnpm exec wrangler secret put ADMIN_SESSION_SECRET    # firma de la cookie /admin y seudónimos de microdatos
+//                                                         #   (obligatoria en producción: 503 si falta)
+//   pnpm exec wrangler secret put ADMIN_PASSWORD_HASH     # solo ADMIN_MODO=password (scripts/hash-password.ts)
 //
 //   # Trazas OpenTelemetry: crear en el panel un destino de tipo "Traces" llamado "otel"
 //   (Observability > Destinations) con el endpoint OTLP del colector; el nombre debe coincidir con

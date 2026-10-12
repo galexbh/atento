@@ -13,7 +13,16 @@ import {
   registrarIntentoFallido,
   verificarContrasena,
 } from "./password";
-import { autenticar, modoAdmin, protegerApi, registrarAuditoria, secretoSesion } from "./proteger";
+import {
+  autenticar,
+  cerrarTodasLasSesiones,
+  errorConfiguracionAdmin,
+  modoAdmin,
+  protegerApi,
+  registrarAuditoria,
+  salIntentos,
+  secretoSesion,
+} from "./proteger";
 
 function redirigir(destino: string, extra: Record<string, string> = {}): Response {
   return new Response(null, {
@@ -34,22 +43,25 @@ export async function procesarEntrar(request: Request): Promise<Response> {
   if (modoAdmin() !== "password") {
     return Response.json({ error: "modo password desactivado" }, { status: 404 });
   }
+  const configuracion = errorConfiguracionAdmin();
+  if (configuracion) return configuracion;
   const hash = env.ADMIN_PASSWORD_HASH;
   const secreto = secretoSesion();
   if (!hash || !secreto) {
     return Response.json({ error: "ADMIN_PASSWORD_HASH no configurado" }, { status: 503 });
   }
   const ip = ipDePeticion(request);
-  if (await estaBloqueada(env.CACHE, ip)) return redirigir("/admin/entrar?error=bloqueado");
+  const sal = salIntentos();
+  if (await estaBloqueada(env.CACHE, ip, sal)) return redirigir("/admin/entrar?error=bloqueado");
   const datos = await request.formData().catch(() => null);
   const contrasena = String(datos?.get("contrasena") ?? "");
   const volverBruto = String(datos?.get("volver") ?? "/admin");
   const volver = /^\/admin(\/[\w\-/?=&%.]*)?$/.test(volverBruto) ? volverBruto : "/admin";
   if (!contrasena || !(await verificarContrasena(contrasena, hash))) {
-    const intentos = await registrarIntentoFallido(env.CACHE, ip);
+    const intentos = await registrarIntentoFallido(env.CACHE, ip, sal);
     return redirigir(`/admin/entrar?error=${intentos >= 5 ? "bloqueado" : "credenciales"}`);
   }
-  await limpiarIntentos(env.CACHE, ip);
+  await limpiarIntentos(env.CACHE, ip, sal);
   const usuario = "admin (password)";
   const cookie = await crearSesion(secreto, usuario, "admin");
   await registrarAuditoria(usuario, "entrar", null, null);
@@ -82,7 +94,9 @@ export async function obtenerRecalculador(): Promise<Recalculador | null> {
 }
 
 /**
- * Acciones de sistema (solo admin): mantenimiento_on/off (configuracion) y recalcular_agregados.
+ * Acciones de sistema (solo admin): mantenimiento_on/off (configuracion), recalcular_agregados y
+ * cerrar_sesiones (fija configuracion.sesiones_no_antes_de = ahora: invalida todas las cookies
+ * emitidas hasta ese momento, incluida la propia).
  * Responde JSON si la petición acepta application/json; si no, redirige a /admin/sistema?msg=...
  */
 export async function procesarSistema(request: Request): Promise<Response> {
@@ -114,6 +128,17 @@ export async function procesarSistema(request: Request): Promise<Response> {
         mensaje = "recalculo-error";
       }
     }
+  } else if (accion === "cerrar_sesiones") {
+    await cerrarTodasLasSesiones();
+    await registrarAuditoria(auth, "cerrar_sesiones", null, null);
+    mensaje = "sesiones-cerradas";
+    if (request.headers.get("Accept")?.includes("application/json")) {
+      return Response.json({ ok: true, mensaje });
+    }
+    // La sesión actual también queda invalidada: se borra la cookie y se vuelve a entrar.
+    return redirigir("/admin/entrar?msg=sesiones-cerradas", {
+      "Set-Cookie": cabeceraBorrarCookie(cookieSegura()),
+    });
   } else {
     return Response.json({ error: "acción desconocida" }, { status: 400 });
   }

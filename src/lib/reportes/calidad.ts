@@ -9,7 +9,7 @@ import type { Filtros } from "./filtros";
 import { type Celda, conteo, type Proporcion, proporcion } from "./supresion";
 
 export interface ReporteCalidad {
-  n: number;
+  n: Celda;
   todoIgual: Proporcion;
   rapidas: Proporcion;
   sinDuracion: Celda;
@@ -62,7 +62,7 @@ export async function reporteCalidad(db: Db, filtros: Filtros): Promise<ReporteC
     return valores[idx] ?? null;
   };
   return {
-    n,
+    n: conteo(n),
     todoIgual: proporcion(todoIgual, filas.length),
     rapidas: proporcion(rapidas?.rapidas ?? 0, n),
     sinDuracion: conteo(rapidas?.sin_duracion ?? 0),

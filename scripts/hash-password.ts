@@ -5,6 +5,7 @@
  *   pnpm tsx scripts/hash-password.ts            # la pide por stdin sin eco
  *
  * Pega la salida en `wrangler secret put ADMIN_PASSWORD_HASH` o en .dev.vars.
+ * Usa 100 000 iteraciones PBKDF2 (ITERACIONES_PBKDF2): Cloudflare Workers rechaza valores mayores.
  */
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";

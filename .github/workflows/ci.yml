@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   verificar:
     name: Lint, tipos, pruebas y build
@@ -22,6 +25,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Auditoría de dependencias (vulnerabilidades altas o críticas)
+        run: pnpm audit --audit-level=high
       - run: pnpm lint
       - run: pnpm check
       - run: pnpm test

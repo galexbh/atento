@@ -4,11 +4,11 @@ import Cifra from "@/components/admin/Cifra.astro";
 import Lineas from "@/components/admin/Lineas.astro";
 import Tabla from "@/components/admin/Tabla.astro";
 import Admin from "@/layouts/Admin.astro";
-import { fmtEntero, fmtFechaHora, fmtPct, fmtPctIc } from "@/lib/admin/formato";
+import { fmtCelda, fmtFechaHora, fmtPct, fmtPctIc } from "@/lib/admin/formato";
 import { protegerPagina } from "@/lib/admin/proteger";
 import { etiquetaPeriodo, parsearFiltros } from "@/lib/reportes/filtros";
 import { reporteResumen } from "@/lib/reportes/resumen";
-import { diferencia } from "@/lib/reportes/supresion";
+import { diferencia, leerNumero } from "@/lib/reportes/supresion";
 
 const auth = await protegerPagina(Astro.request);
 if (auth instanceof Response) return auth;
@@ -32,7 +32,7 @@ function delta(
     sentido: d.absoluta > 0 ? "sube" : d.absoluta < 0 ? "baja" : "igual",
   };
 }
-const dN = comparado ? delta(resumen.nPeriodo, comparado.nPeriodo) : null;
+const dN = comparado ? delta(leerNumero(resumen.nPeriodo), leerNumero(comparado.nPeriodo)) : null;
 const dPos = comparado ? delta(resumen.positivo.pct, comparado.positivo.pct, " pt") : null;
 const dComp = comparado ? delta(resumen.completitud.pct, comparado.completitud.pct, " pt") : null;
 
@@ -40,8 +40,8 @@ const filasComparacion = comparado
   ? [
       {
         indicador: "Respuestas completadas",
-        a: fmtEntero(comparado.nPeriodo),
-        b: fmtEntero(resumen.nPeriodo),
+        a: fmtCelda(comparado.nPeriodo),
+        b: fmtCelda(resumen.nPeriodo),
         dif: dN?.texto ?? "—",
       },
       {
@@ -74,8 +74,8 @@ const filasComparacion = comparado
 
 <Admin titulo="Resumen" usuario={auth} filtros={filtros} activo="resumen">
   <section class="rejilla" aria-label="Cifras principales">
-    <Cifra etiqueta="Respuestas completadas (histórico)" valor={fmtEntero(resumen.nTotalHistorico)} />
-    <Cifra etiqueta={`Completadas en ${etiquetaPeriodo(filtros.periodo).toLowerCase()}`} valor={fmtEntero(resumen.nPeriodo)} delta={dN?.texto} deltaSentido={dN?.sentido} />
+    <Cifra etiqueta="Respuestas completadas (histórico)" valor={fmtCelda(resumen.nTotalHistorico)} />
+    <Cifra etiqueta={`Completadas en ${etiquetaPeriodo(filtros.periodo).toLowerCase()}`} valor={fmtCelda(resumen.nPeriodo)} delta={dN?.texto} deltaSentido={dN?.sentido} />
     <Cifra etiqueta="% cribado positivo" valor={fmtPct(resumen.positivo)} nota={resumen.positivo.ic95 ? `IC95 ${fmtPctIc(resumen.positivo).replace(/^.*\(IC95 /, "").replace(")", "")}` : undefined} delta={dPos?.texto} deltaSentido={dPos?.sentido} />
     <Cifra etiqueta="% combinado (inatención + hiperactividad)" valor={fmtPct(resumen.combinado)} />
     <Cifra etiqueta="Completitud" valor={fmtPct(resumen.completitud)} nota="completadas / iniciadas" delta={dComp?.texto} deltaSentido={dComp?.sentido} />

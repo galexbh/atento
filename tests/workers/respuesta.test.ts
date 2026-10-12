@@ -26,7 +26,7 @@ function envioValido(extra: Partial<Envio> = {}): Envio {
     sexo: "F",
     informante: "madre",
     consentimientoInvestigacion: true,
-    versionConsentimiento: "v1",
+    versionConsentimiento: "2026-10-11",
     duracionSegundos: 427,
     completado: true,
     turnstileToken: "token-de-prueba",
@@ -179,17 +179,32 @@ describe("POST /api/respuesta", () => {
     expect(llamadasSiteverify).toHaveLength(0);
   });
 
-  it("Turnstile inválido -> 403 y sin fila", async () => {
+  it("Turnstile inválido -> 403 y sin fila; la cuota se consume igualmente (B2)", async () => {
     vi.unstubAllGlobals();
     mockSiteverify(false);
     const envio = envioValido();
-    const r = await enviar(envio);
+    const ip = "198.51.100.42";
+    const antes = (await env.CACHE.list({ prefix: "rl:" })).keys.length;
+    const r = await enviar(envio, { ip });
     expect(r.status).toBe(403);
     expect((await r.json<{ motivo: string }>()).motivo).toBe("turnstile");
     const fila = await env.DB.prepare("SELECT 1 AS x FROM respuestas WHERE id = ?")
       .bind(envio.id)
       .first();
     expect(fila).toBeNull();
+    expect((await env.CACHE.list({ prefix: "rl:" })).keys.length).toBe(antes + 1);
+    // Con la cuota agotada, el reintento recibe 429 antes de llegar a Turnstile.
+    for (let i = 0; i < 4; i++) await enviar(envioValido(), { ip });
+    expect((await enviar(envio, { ip })).status).toBe(429);
+  });
+
+  it("un envío inválido no consume cuota (B2: el límite va tras la validación)", async () => {
+    const ip = "198.51.100.43";
+    const antes = (await env.CACHE.list({ prefix: "rl:" })).keys.length;
+    for (let i = 0; i < 7; i++) {
+      expect((await enviar(envioValido({ edadAnios: 40 }), { ip })).status).toBe(400);
+    }
+    expect((await env.CACHE.list({ prefix: "rl:" })).keys.length).toBe(antes);
   });
 
   it("6.º envío en una hora desde la misma IP -> 429", async () => {

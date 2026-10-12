@@ -47,7 +47,7 @@ const filas = [
 
 <Admin titulo="Investigación y consentimiento" usuario={auth} filtros={filtros} activo="investigacion">
   <section class="rejilla" aria-label="Consentimiento">
-    <Cifra etiqueta="Respuestas completadas" valor={fmtCelda({ n: d.n, suprimido: false })} />
+    <Cifra etiqueta="Respuestas completadas" valor={fmtCelda(d.n)} />
     <Cifra etiqueta="% que acepta donar sus datos para investigación" valor={fmtPct(d.consentimiento)} nota={fmtPctIc(d.consentimiento)} />
   </section>
   <section class="panel">

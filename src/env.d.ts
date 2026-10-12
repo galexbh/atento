@@ -17,7 +17,11 @@ declare namespace Cloudflare {
     SITE_URL: string;
     /** Entorno de ejecución. */
     ENTORNO: "local" | "preview" | "produccion";
-    /** Sal opcional para el hash de IP del límite de tasa; si falta se deriva de la fecha UTC. */
+    /**
+     * Sal secreta (`wrangler secret put RATE_SALT`) del HMAC de IP del límite de tasa y de los
+     * intentos de /admin/entrar. Obligatoria en producción (503 si falta); en local/preview, si
+     * falta, se deriva de la fecha UTC.
+     */
     RATE_SALT?: string;
   }
 }

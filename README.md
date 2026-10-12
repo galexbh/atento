@@ -59,7 +59,7 @@ Otros comandos útiles:
 
 | Ruta | Qué hace |
 | ---- | -------- |
-| `POST /api/respuesta` | Recibe un cuestionario (JSON ≤ 32 KB, `EsquemaEnvio` estricto), verifica Turnstile, aplica límite de 5 envíos/hora/IP (hash SHA-256 de IP + sal en KV, TTL 1 h; la IP nunca se guarda), puntúa **en servidor** y guarda en `respuestas` solo la fecha UTC (sin hora) y la duración redondeada a 10 s. Respuestas: 201 `{ok, nivel}`, 200 `{ok, duplicado}` si el id ya existía, 400 validación, 403 Turnstile, 413, 415, 429, 503 `{ok:false, motivo:"no_guardado"}`. El honeypot `hp` relleno responde 201 sin guardar. |
+| `POST /api/respuesta` | Recibe un cuestionario (JSON ≤ 32 KB, `EsquemaEnvio` estricto), aplica el límite de 5 envíos/hora/IP justo después de validar (HMAC-SHA256 de la IP con `RATE_SALT` en KV, TTL 1 h; la IP nunca se guarda) y antes de consultar D1 o Turnstile, verifica Turnstile, puntúa **en servidor** y guarda en `respuestas` solo la fecha UTC (sin hora) y la duración redondeada a 10 s. Respuestas: 201 `{ok, nivel}`, 200 `{ok, duplicado}` si el id ya existía, 400 validación, 403 Turnstile, 413, 415, 429, 503 `{ok:false, motivo:"no_guardado"}` (D1) o `motivo:"configuracion"` (producción sin `RATE_SALT`). El honeypot `hp` relleno responde 201 sin guardar. |
 | `GET /api/agregado?periodo=acumulado&nivel=departamento\|municipio&version=todas` | Lee solo `agregados_municipio` (nunca filas individuales). Caché KV 1 h, `Cache-Control: public, max-age=300, s-maxage=3600`, ETag/304. Respuesta `{periodo, nivel, version, calculadoEn, datos:[{codigo, nombre, n, pct, ic95, suprimido, pctInatencion, pctHiperactividad, pctAmbas}]}`. |
 | `GET /api/agregado/periodos` | Periodos (`acumulado`, `2026`, `2026-Q4`, `2026-10`) y versiones de instrumento con agregados. |
 | `GET /api/geo?nivel=departamento` | GeoJSON de departamentos incrustado en el Worker (`public/geo/...geojson?raw`), `application/geo+json`, caché de 1 día (7 en borde), ETag. |
@@ -76,9 +76,12 @@ invalida la caché KV `agregado:*` y, cada 1 de enero, congela el año anterior 
 - Filas por departamento: `municipio = departamento + "00"` (p. ej. `0800` = Francisco Morazán); ningún
   municipio real usa ese código. `nivel=departamento` en la API devuelve `codigo` de 2 dígitos.
 - Se agrega por cada `version_instrumento` y, además, por `todas`.
-- Turnstile en local/preview sin `TURNSTILE_SECRET`: se asume la clave de prueba de Cloudflare (acepta
-  cualquier token) y no se llama a siteverify. En producción el secreto es obligatorio.
-- `RATE_SALT` (var opcional): sal del hash de IP; si falta se deriva de la fecha UTC.
+- Turnstile solo en `ENTORNO=local` sin `TURNSTILE_SECRET` (o con la clave de prueba de Cloudflare):
+  se acepta cualquier token y no se llama a siteverify. En preview y producción el secreto real es
+  obligatorio; si falta o es la clave de prueba, toda verificación falla.
+- `RATE_SALT` (secreto): sal del HMAC de IP del límite de tasa y de los intentos de `/admin/entrar`.
+  Obligatoria en producción (`/api/respuesta` responde 503 `configuracion` si falta); en local/preview,
+  si falta, se deriva de la fecha UTC.
 
 ## Datos de prueba
 
@@ -95,10 +98,10 @@ y `--archivo ruta`. `pnpm agregar:local` acepta `--snapshot 2025` para crear el 
 disparar el cron real en local: `pnpm build && pnpm exec wrangler dev --test-scheduled` y luego
 `curl "http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*"`.
 
-Para probar `POST /api/respuesta` con `pnpm preview` (que usa `ENTORNO=produccion` de `wrangler.jsonc`,
-donde el secreto es obligatorio), pon en `.dev.vars` la clave de prueba de Turnstile
-`TURNSTILE_SECRET=1x0000000000000000000000000000000AA` (acepta cualquier token; requiere red) o
-`ENTORNO=local` (omite la llamada a siteverify).
+Para probar `POST /api/respuesta` con `pnpm preview` (que toma `ENTORNO=produccion` de `wrangler.jsonc`),
+pon en `.dev.vars` `ENTORNO=local` y `RATE_SALT=<cualquier cadena>`: con `ENTORNO=local` se acepta la
+clave de prueba de Turnstile `TURNSTILE_SECRET=1x0000000000000000000000000000000AA` sin llamar a
+siteverify. Fuera de `local` la clave de prueba se rechaza.
 
 ## Despliegue
 
@@ -108,8 +111,17 @@ pega los IDs en `wrangler.jsonc` (los pasos exactos están comentados al inicio 
 ```bash
 pnpm exec wrangler d1 create atento-db
 pnpm exec wrangler kv namespace create CACHE
-pnpm exec wrangler secret put TURNSTILE_SECRET
+pnpm exec wrangler secret put TURNSTILE_SECRET        # clave real de Turnstile
+pnpm exec wrangler secret put RATE_SALT               # p. ej. openssl rand -hex 32 (obligatoria en producción)
+pnpm exec wrangler secret put ADMIN_SESSION_SECRET    # obligatoria en producción (cookie /admin y microdatos)
+pnpm exec wrangler secret put ADMIN_PASSWORD_HASH     # solo ADMIN_MODO=password; hash PBKDF2 de 100 000 iteraciones
 ```
+
+El hash de `ADMIN_PASSWORD_HASH` se genera con `pnpm tsx scripts/hash-password.ts "contraseña"`.
+Usa 100 000 iteraciones PBKDF2: el runtime de Cloudflare Workers rechaza valores mayores
+(`NotSupportedError: iteration counts above 100000 are not supported`), así que un hash de 200 000
+iteraciones funciona en local pero hace fallar el login en la nube; `verificarContrasena` lo
+rechaza y lo avisa en los registros.
 
 Luego:
 
@@ -126,10 +138,28 @@ fijadas y espera 3 días antes de proponer versiones nuevas (igual que `minimumR
 ## Seguridad
 
 `src/middleware.ts` añade a todas las respuestas una CSP estricta con nonce por petición
-(`Astro.locals.nonce`), HSTS en los dominios de producción y preview, y el resto de cabeceras
-habituales. En `/api/*` se rechaza con 403 cualquier petición cuyo `Origin` no coincida con
-`SITE_URL`. La fila `mantenimiento = '1'` de la tabla `configuracion` activa un 503 global
+(`Astro.locals.nonce`, con `worker-src` y `manifest-src` limitados a `'self'`), HSTS en los dominios
+de producción y preview, y el resto de cabeceras habituales. `public/_headers` (formato de
+Cloudflare Workers Static Assets) añade `nosniff`/`Referrer-Policy` a los estáticos, `CSP: sandbox`
+a `/ilustraciones/*` y `/marca/*` (SVG) y caché de un día a `/geo/*`. Anti-CSRF
+(`src/lib/api/origen.ts`): en `/api/*` se rechaza con 403 cualquier petición cuyo `Origin` no
+coincida con `SITE_URL`; en todo POST bajo `/admin` y `/api/admin` la comprobación es estricta (si
+falta `Origin` se usa `Sec-Fetch-Site`; sin ambas se rechaza fuera de `local`). La cookie de sesión
+del panel lleva `Path=/` y `SameSite=Strict`, incluye `iat` y el botón "Cerrar todas las sesiones"
+de `/admin/sistema` escribe `configuracion.sesiones_no_antes_de` para invalidar las emitidas antes.
+La fila `mantenimiento = '1'` de la tabla `configuracion` activa un 503 global
 (excepto `/admin*`), con caché en memoria de 60 segundos.
+
+Panel y microdatos: todos los conteos (incluidos los totales) se publican con supresión `n < 5`;
+el rol investigador no puede combinar `municipio` con edad, sexo, informante ni periodos mensuales,
+y cada consulta a `/api/admin/reporte/*` queda en `auditoria_admin` (acción `consulta`). La
+exportación de microdatos solo admite periodo anual o acumulado, departamento y versión del
+instrumento; el `id` es un seudónimo HMAC distinto en cada descarga, el municipio se recodifica
+con el umbral calculado sobre todo el periodo y se aplica k-anonimato sobre
+(departamento, edad, sexo, informante): edad a tramo y, si sigue `n < 5`, sexo e informante en
+blanco (ver el codebook). Los CSV neutralizan fórmulas (`=`, `+`, `-`, `@`, TAB, CR al inicio).
+La migración `0003` añade un trigger `BEFORE INSERT` en `respuestas` que exige `items` JSON válido,
+`codigo_vinculo` de 8 caracteres (o NULL) y `version_consentimiento` con formato `AAAA-MM-DD`.
 
 ## Estructura de carpetas
 

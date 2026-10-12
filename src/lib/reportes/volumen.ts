@@ -16,7 +16,7 @@ export interface FilaVolumen {
 export interface ReporteVolumen {
   granularidad: Granularidad;
   series: FilaVolumen[];
-  totales: { total: number; completadas: number; abandonadas: number; completitud: Proporcion };
+  totales: { total: Celda; completadas: Celda; abandonadas: Celda; completitud: Proporcion };
   /** Ítem en el que más se abandona (solo si n >= umbral). */
   itemsAbandono: Array<{ item: string; n: Celda }>;
 }
@@ -60,9 +60,9 @@ export async function reporteVolumen(
     granularidad,
     series,
     totales: {
-      total,
-      completadas,
-      abandonadas: total - completadas,
+      total: conteo(total),
+      completadas: conteo(completadas),
+      abandonadas: conteo(total - completadas),
       completitud: proporcion(completadas, total),
     },
     itemsAbandono: abandono.map((a) => ({ item: a.item, n: conteo(a.n) })),

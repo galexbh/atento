@@ -17,6 +17,7 @@ export default defineConfig({
           bindings: {
             TEST_MIGRATIONS: migrations,
             ENTORNO: "local",
+            RATE_SALT: "sal-de-prueba",
             ADMIN_MODO: "password",
             ADMIN_PASSWORD_HASH: hash,
             ADMIN_SESSION_SECRET: "secreto-de-sesion-solo-para-pruebas",

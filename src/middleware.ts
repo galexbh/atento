@@ -1,11 +1,13 @@
 import { defineMiddleware } from "astro:middleware";
 import { env } from "cloudflare:workers";
+import { exigeOrigenEstricto, verificarOrigen } from "@/lib/api/origen";
 
 /**
  * Middleware global de Atento.
  *
  * 1. Cabeceras de seguridad en TODAS las respuestas (CSP con nonce por petición).
- * 2. Verificación de `Origin` en /api/* (debe coincidir con SITE_URL si viene).
+ * 2. Anti-CSRF: `Origin` en /api/* (si viene) y comprobación estricta en todo POST bajo /admin
+ *    y /api/admin (Origin o Sec-Fetch-Site; sin ambas se rechaza fuera de local).
  * 3. Modo mantenimiento (configuracion.mantenimiento = '1') -> 503, salvo /admin*.
  *
  * Nota sobre `style-src 'unsafe-inline'`: Astro inyecta los estilos de componentes como
@@ -36,6 +38,8 @@ function construirCsp(nonce: string): string {
     "font-src 'self'",
     "connect-src 'self'",
     "frame-src https://challenges.cloudflare.com",
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -106,21 +110,23 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const nonce = generarNonce();
   context.locals.nonce = nonce;
 
-  // /api/*: si el navegador envía Origin, debe ser el del sitio.
-  if (url.pathname.startsWith("/api/")) {
-    const origen = context.request.headers.get("Origin");
-    if (origen !== null) {
-      let permitido = false;
-      try {
-        permitido = new URL(origen).origin === new URL(env.SITE_URL).origin;
-      } catch {
-        permitido = false;
-      }
-      // En local el sitio corre en localhost; se acepta el propio origen de la petición.
-      if (!permitido && env.ENTORNO === "local") permitido = origen === url.origin;
-      if (!permitido) {
+  // Anti-CSRF (ver src/lib/api/origen.ts):
+  // - /api/*: si el navegador envía Origin, debe ser el del sitio.
+  // - POST (y cualquier método mutador) bajo /admin y /api/admin: comprobación estricta
+  //   (Origin, o Sec-Fetch-Site si falta; sin ambas se rechaza fuera de local).
+  const metodo = context.request.method;
+  const estricto = exigeOrigenEstricto(url.pathname, metodo);
+  if (estricto || url.pathname.startsWith("/api/")) {
+    const tieneOrigin = context.request.headers.get("Origin") !== null;
+    if (estricto || tieneOrigin) {
+      const resultado = verificarOrigen(context.request.headers, {
+        siteUrl: env.SITE_URL,
+        entorno: env.ENTORNO,
+        origenPeticion: url.origin,
+      });
+      if (!resultado.permitido) {
         return aplicarCabecerasSeguridad(
-          respuestaJson({ error: "origen no permitido" }, 403),
+          respuestaJson({ error: resultado.motivo }, 403),
           nonce,
           url.hostname,
         );

@@ -203,7 +203,7 @@ function generarFila(): FilaRespuestaNueva {
       [60, 20, 10, 10],
     ),
     consentimientoInvestigacion: rnd() < 0.7,
-    versionConsentimiento: "v1",
+    versionConsentimiento: "2026-10-11",
     duracionSegundos: Math.round(240 + rnd() * 600 + rnd() * 300),
     completado,
     turnstileToken: "semilla",

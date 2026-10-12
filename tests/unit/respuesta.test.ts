@@ -21,7 +21,7 @@ function envioValido(): Envio {
     sexo: "F",
     informante: "madre",
     consentimientoInvestigacion: true,
-    versionConsentimiento: "v1",
+    versionConsentimiento: "2026-10-11",
     duracionSegundos: 420,
     completado: true,
     turnstileToken: "token-de-prueba",

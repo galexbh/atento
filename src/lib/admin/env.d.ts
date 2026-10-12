@@ -9,8 +9,9 @@
 //   "ADMIN_MODO": "access"                                      // "access" (defecto) o "password"
 // Secretos (wrangler secret put ...), solo si ADMIN_MODO = "password":
 //   ADMIN_PASSWORD_HASH   hash generado con `pnpm tsx scripts/hash-password.ts`
-//   ADMIN_SESSION_SECRET  cadena aleatoria larga para firmar la cookie de sesión (opcional:
-//                         si falta se deriva de ADMIN_PASSWORD_HASH)
+//   ADMIN_SESSION_SECRET  cadena aleatoria larga para firmar la cookie de sesión y seudonimizar
+//                         ids en microdatos. Obligatoria en producción (503 si falta); en local,
+//                         si falta, se deriva de ADMIN_PASSWORD_HASH.
 declare namespace Cloudflare {
   interface Env {
     /** Dominio del equipo de Cloudflare Access, p. ej. "atento.cloudflareaccess.com". */
@@ -25,7 +26,7 @@ declare namespace Cloudflare {
     ADMIN_MODO?: "access" | "password";
     /** Hash PBKDF2 de la contraseña de respaldo (`pbkdf2$<iter>$<sal>$<hash>`). */
     ADMIN_PASSWORD_HASH?: string;
-    /** Secreto HMAC para la cookie de sesión del modo password. */
+    /** Secreto HMAC de la cookie de sesión y de los seudónimos de microdatos (obligatorio en producción). */
     ADMIN_SESSION_SECRET?: string;
   }
 }

@@ -4,8 +4,9 @@ import type { Filtros } from "./filtros";
 import { type Celda, conteo, type Proporcion, proporcion } from "./supresion";
 
 export interface ReporteResumen {
-  nTotalHistorico: number;
-  nPeriodo: number;
+  /** Conteos suprimidos (n < 5) como cualquier otra celda. */
+  nTotalHistorico: Celda;
+  nPeriodo: Celda;
   completitud: Proporcion;
   positivo: Proporcion;
   combinado: Proporcion;
@@ -55,8 +56,8 @@ export async function reporteResumen(db: Db, filtros: Filtros): Promise<ReporteR
   }
   const p = periodo ?? { n: 0, completadas: 0, positivos: 0, combinados: 0, consentimiento: 0 };
   return {
-    nTotalHistorico: total?.n ?? 0,
-    nPeriodo: p.completadas ?? 0,
+    nTotalHistorico: conteo(total?.n ?? 0),
+    nPeriodo: conteo(p.completadas ?? 0),
     completitud: proporcion(p.completadas ?? 0, p.n),
     positivo: proporcion(p.positivos ?? 0, p.completadas ?? 0),
     combinado: proporcion(p.combinados ?? 0, p.completadas ?? 0),

@@ -156,7 +156,17 @@ self.addEventListener("sync", (ev) => {
 
 self.addEventListener("message", (ev) => {
   if (ev.data === "atento:reintentar") ev.waitUntil(vaciarCola());
+  // "Borrar mis datos de este dispositivo": descarta los envíos pendientes sin enviarlos.
+  if (ev.data === "atento:vaciar-cola") ev.waitUntil(descartarCola());
 });
+
+async function descartarCola() {
+  try {
+    await transaccion("readwrite", (st) => st.clear());
+  } catch {
+    // Sin IndexedDB: nada que borrar.
+  }
+}
 
 async function vaciarCola() {
   let pendientes = [];

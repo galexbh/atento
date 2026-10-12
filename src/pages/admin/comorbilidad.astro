@@ -31,7 +31,7 @@ const celdasPct = d.escalas.map((a) =>
 <Admin titulo="Comorbilidad" usuario={auth} filtros={filtros} activo="comorbilidad">
   <section class="rejilla rejilla--2">
     <div class="panel">
-      <Matriz titulo={`Co-ocurrencia de positivos (n con fila y columna positivas; diagonal = positivos de la fila). n = ${d.n}`} filas={nombres} columnas={nombres} celdas={celdasN} />
+      <Matriz titulo={`Co-ocurrencia de positivos (n con fila y columna positivas; diagonal = positivos de la fila). n = ${fmtCelda(d.n)}`} filas={nombres} columnas={nombres} celdas={celdasN} />
     </div>
     <div class="panel">
       <Matriz titulo="% de positivos en la fila que también son positivos en la columna" filas={nombres} columnas={nombres} celdas={celdasPct} max={100} />

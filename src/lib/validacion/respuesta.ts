@@ -38,7 +38,10 @@ export const EsquemaEnvio = z
     sexo: z.enum(["F", "M", "X"]),
     informante: z.enum(["madre", "padre", "cuidador", "docente"]),
     consentimientoInvestigacion: z.boolean(),
-    versionConsentimiento: z.string().min(1).max(32),
+    /** Fecha (AAAA-MM-DD) del texto de consentimiento aceptado; ver almacen.VERSION_CONSENTIMIENTO. */
+    versionConsentimiento: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "versionConsentimiento debe ser una fecha AAAA-MM-DD"),
     duracionSegundos: z.number().int().min(0).max(86400).optional(),
     completado: z.boolean(),
     /** Id del ítem en el que se abandonó el cuestionario (si no se completó). */
@@ -78,7 +81,7 @@ export const EsquemaEnvio = z
         ctx.addIssue({
           code: "custom",
           path: ["respuestas", itemId],
-          message: `el ítem "${itemId}" no pertenece al instrumento`,
+          message: "ítem desconocido",
         });
         continue;
       }
@@ -100,7 +103,7 @@ export const EsquemaEnvio = z
           ctx.addIssue({
             code: "custom",
             path: ["respuestasAtento", itemId],
-            message: `el ítem "${itemId}" no pertenece al instrumento ${INSTRUMENTO_ATENTO}`,
+            message: "ítem desconocido",
           });
           continue;
         }
