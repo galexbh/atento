@@ -1,0 +1,27 @@
+{
+  "name": "Atento: cribado de TDAH en niños",
+  "short_name": "Atento",
+  "description": "Cuestionario gratuito y anónimo de cribado (no diagnóstico) de TDAH para niños y niñas de 6 a 12 años en Honduras.",
+  "lang": "es-HN",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F4EE",
+  "theme_color": "#1F6F8B",
+  "categories": ["health", "education"],
+  "icons": [
+    { "src": "/marca/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/marca/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Empezar el cuestionario",
+      "short_name": "Empezar",
+      "url": "/cribado/consentimiento",
+      "icons": [{ "src": "/marca/icono-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

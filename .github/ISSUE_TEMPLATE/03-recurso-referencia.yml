@@ -1,0 +1,52 @@
+name: Recurso de referencia en Honduras
+description: Proponer, corregir o retirar un centro, profesional, línea de ayuda o material de la lista de recursos.
+title: "[Recurso] "
+labels: ["recursos"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        La lista de recursos (`docs/07-recursos-honduras.md`) debe estar verificada y vigente.
+        Solo se incluyen servicios públicos, ONG reconocidas o profesionales colegiados; no se
+        aceptan anuncios comerciales.
+  - type: dropdown
+    id: accion
+    attributes:
+      label: Qué propones
+      options:
+        - Añadir un recurso nuevo
+        - Corregir datos de un recurso existente
+        - Retirar un recurso (ya no existe o no es adecuado)
+    validations:
+      required: true
+  - type: input
+    id: nombre
+    attributes:
+      label: Nombre del recurso
+      placeholder: Hospital Escuela, Unidad de Salud Mental Infantil
+    validations:
+      required: true
+  - type: input
+    id: ubicacion
+    attributes:
+      label: Departamento y municipio
+      placeholder: Francisco Morazán, Distrito Central
+  - type: textarea
+    id: datos
+    attributes:
+      label: Datos de contacto y horario
+      description: Teléfono, dirección, sitio web, horario, costo (gratuito, cuota, privado).
+  - type: textarea
+    id: verificacion
+    attributes:
+      label: Cómo lo verificaste y cuándo
+      description: Llamada, visita, sitio oficial, fecha. Nos ayuda a mantener la lista fiable.
+    validations:
+      required: true
+  - type: checkboxes
+    id: relacion
+    attributes:
+      label: Transparencia
+      options:
+        - label: No tengo relación económica con este recurso, o la declaro en el comentario.
+          required: true

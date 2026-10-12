@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Reportar una vulnerabilidad (privado)
+    url: https://github.com/galexbh/atento/security/advisories/new
+    about: Fallos de seguridad; nunca en un issue público. Ver SECURITY.md.
+  - name: Escribir al proyecto
+    url: mailto:info@galexbh.dev
+    about: Dudas, propuestas de colaboración clínica o académica, prensa.

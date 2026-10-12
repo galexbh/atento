@@ -138,7 +138,7 @@ habituales. En `/api/*` se rechaza con 403 cualquier petición cuyo `Origin` no 
 ├── .github/workflows/   CI
 ├── docs/                Documentación del proyecto (metodología, instrumento, privacidad...)
 ├── migrations/          Migraciones D1 (SQL), numeradas
-├── public/              Estáticos (ilustraciones, imágenes, marca)
+├── public/              Estáticos (marca, imágenes, robots, llms.txt, manifest, sw.js, .well-known)
 ├── scripts/             Utilidades (seed)
 ├── src/
 │   ├── data/            Catálogos (departamentos, municipios, ítems del instrumento)
@@ -159,6 +159,63 @@ habituales. En `/api/*` se rechaza con 403 cualquier petición cuyo `Origin` no 
 
 Documentación ampliada en [`docs/`](./docs/).
 
-## Licencia y contacto
+## SEO y descubribilidad
+
+- `astro.config.mjs` fija `site` y configura `@astrojs/sitemap`: como el sitio es `output: "server"`,
+  solo entran las rutas estáticas y `/legal/*` se añade con `customPages`; se excluyen `/resultado`,
+  `/cribado/*`, `/admin/*`, `/api/*` y `/offline`. El sitemap se genera en `pnpm build` en
+  `dist/client/sitemap-index.xml` y se sirve como estático.
+- `public/robots.txt` permite todo salvo `/api/`, `/admin/`, `/resultado` y `/cribado/`.
+- `src/layouts/Base.astro` emite JSON-LD `WebSite` + `Organization` en las páginas indexables y
+  `BreadcrumbList` en `/legal/*` y `/metodologia`; la portada añade `FAQPage` con las preguntas del
+  `<details>`. No se usan tipos `Medical*`: Atento es cribado comunitario, no un servicio médico.
+  El componente `src/components/seo/JsonLd.astro` inserta los bloques con el nonce de la CSP.
+- Archivos para asistentes y auditores: `public/llms.txt` (resumen con enlaces, formato
+  llmstxt.org), `public/llms-full.txt` (aviso de salud + metodología completa, generado a partir de
+  `docs/06-metodologia-publica.md`; actualízalo cuando cambie ese documento), `public/humans.txt` y
+  `public/.well-known/security.txt` (RFC 9116; renueva `Expires` cada año).
+- Las páginas de flujo y el resultado llevan `noindex`. `tests/e2e/seo.spec.ts` verifica robots,
+  sitemap, JSON-LD, Open Graph, canonical, `noindex` y que cada título mida ≤ 60 y cada descripción
+  ≤ 160 caracteres.
+
+## PWA y modo sin conexión
+
+- `public/manifest.webmanifest`: nombre, `lang: es-HN`, `display: standalone`, colores de la paleta
+  (`#F7F4EE` fondo, `#1F6F8B` tema) e iconos 192/512 (`public/marca/`). `Base.astro` enlaza el
+  manifest y declara `theme-color` para claro y oscuro.
+- `public/sw.js` (service worker, sin dependencias): precachea el app shell (`/`, flujo de cribado,
+  `/resultado`, `/offline`), sirve las navegaciones *network-first* con fallback a `/offline` y los
+  recursos del mismo origen *stale-while-revalidate*. **Nunca cachea `/api/*` ni `/admin/*`.**
+- Cola de envíos: si `POST /api/respuesta` falla por red, el cuerpo (sin datos identificables) se
+  guarda en IndexedDB (`atento-cola`) y se reintenta con Background Sync (tag `atento-envio`) o en
+  el siguiente arranque del SW. El cliente recibe `503 {ok:false, motivo:"en_cola"}` y el resultado
+  queda marcado como no guardado (nunca se afirma un guardado que no ocurrió). Un reintento puede
+  ser rechazado por el servidor si el token de Turnstile venció; los 4xx se descartan.
+- El SW se registra desde `Base.astro` solo en build (`import.meta.env.PROD`), nunca en `astro dev`.
+  Para probarlo: `pnpm build`, luego `pnpm preview` y
+  `E2E_URL=http://127.0.0.1:8787 pnpm test:e2e pwa` (`tests/e2e/pwa.spec.ts`). Para invalidar la
+  caché en producción, sube `VERSION` en `sw.js`.
+
+## Licencias
+
+| Qué | Licencia |
+| --- | --- |
+| Código fuente | [MIT](./LICENSE), © 2026 Gabriel Barrientos (galexbh) |
+| Datos agregados publicados e ítems Atento | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| NICHQ Vanderbilt Assessment Scale, 1.ª ed. (2002) | © American Academy of Pediatrics y NICHQ; no cubierta por las anteriores |
+| Nombre y logotipo de Atento | Reservados; se pueden citar, no usar para suplantar el sitio |
+
+Detalle y créditos de imágenes en [`docs/03-legal/creditos-y-licencias.md`](./docs/03-legal/creditos-y-licencias.md)
+y en <https://atento.galexbh.dev/legal/creditos>.
+
+## Contribuir y seguridad
+
+- Cómo contribuir, convenciones y revisión clínica obligatoria: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- Código de conducta: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).
+- Reporte responsable de vulnerabilidades: [`SECURITY.md`](./SECURITY.md) y
+  <https://atento.galexbh.dev/.well-known/security.txt>. No abras issues públicos para ello.
+- Historial de versiones: [`CHANGELOG.md`](./CHANGELOG.md).
+
+## Contacto
 
 Proyecto personal sin fines de lucro. Dudas, sugerencias o reportes: <info@galexbh.dev>.

@@ -1,0 +1,61 @@
+---
+import { ilustracion } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+
+/**
+ * Página que muestra el service worker (public/sw.js) cuando no hay conexión y la página pedida
+ * no está en caché. También se puede abrir directamente en /offline; no se indexa.
+ */
+---
+
+<Base
+  titulo="Sin conexión"
+  descripcion="Atento no pudo cargar esta página porque no hay conexión a internet."
+  noindex
+>
+  <section class="contenedor sin-conexion" aria-labelledby="sin-conexion-titulo">
+    <div class="sin-conexion__ilus" set:html={ilustracion("vacio", { decorativo: true, clase: "ilustracion" })} />
+    <h1 id="sin-conexion-titulo">Parece que no hay conexión</h1>
+    <p>
+      No pasa nada. Lo que ya respondiste se guarda en este dispositivo y, si decidiste
+      compartir tus respuestas con el mapa, las enviaremos solas cuando vuelva la señal.
+    </p>
+    <p>
+      Puedes seguir con el cuestionario si ya lo habías abierto, o volver a intentarlo en un
+      momento.
+    </p>
+    <p class="acciones">
+      <a class="boton boton--primario" href="/">Ir al inicio</a>
+      <a class="boton boton--secundario" href="/cribado/cuestionario">Seguir el cuestionario</a>
+    </p>
+    <p class="nota">
+      Si necesitas ayuda urgente, llama al 911 o acude al centro de salud más cercano.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .sin-conexion {
+    padding-block: var(--espacio-5);
+    max-width: 40rem;
+    text-align: center;
+  }
+  .sin-conexion__ilus {
+    max-width: 16rem;
+    margin: 0 auto var(--espacio-3);
+  }
+  .sin-conexion__ilus :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-2);
+    justify-content: center;
+  }
+  .nota {
+    color: var(--color-texto-suave);
+    font-size: 0.95rem;
+  }
+</style>

@@ -1,0 +1,11 @@
+# Atento — https://atento.galexbh.dev
+# Cribado comunitario de TDAH infantil (no diagnóstico). Las rutas del flujo
+# y del resultado no se indexan: no contienen información útil fuera de contexto.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /resultado
+Disallow: /cribado/
+
+Sitemap: https://atento.galexbh.dev/sitemap-index.xml

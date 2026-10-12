@@ -1,0 +1,34 @@
+name: Seguridad (no usar para vulnerabilidades)
+description: Las vulnerabilidades se reportan en privado. Esta plantilla solo te redirige.
+title: "[Seguridad] Consulta general"
+labels: ["seguridad"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Alto: no describas aquí una vulnerabilidad
+
+        Los issues son públicos. Si encontraste una forma de exponer datos, alterar resultados,
+        saltarte el límite de envíos o cualquier otro fallo de seguridad:
+
+        1. Escribe a **info@galexbh.dev** con el asunto `Seguridad Atento`, o usa
+           *Security → Report a vulnerability* en GitHub (reporte privado).
+        2. Lee el alcance, lo que no hay que hacer y los plazos en
+           [SECURITY.md](../blob/main/SECURITY.md).
+        3. Archivo legible por máquinas: <https://atento.galexbh.dev/.well-known/security.txt>.
+
+        Usa este formulario únicamente para preguntas generales sobre la política de seguridad
+        (por ejemplo, dudas sobre el alcance) que no revelen ningún fallo.
+  - type: checkboxes
+    id: confirmacion
+    attributes:
+      label: Confirmación
+      options:
+        - label: Confirmo que este issue NO describe una vulnerabilidad ni cómo explotarla.
+          required: true
+  - type: textarea
+    id: consulta
+    attributes:
+      label: Consulta general sobre la política de seguridad
+    validations:
+      required: true

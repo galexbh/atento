@@ -17,7 +17,29 @@ export default defineConfig({
     imageService: "compile",
   }),
   session: false,
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      // En `output: "server"` solo entran rutas estáticas; /legal/[slug] se añade a mano.
+      customPages: [
+        "terminos",
+        "privacidad",
+        "aviso-de-salud",
+        "cookies",
+        "accesibilidad",
+        "datos-abiertos",
+        "creditos",
+      ].map((slug) => `https://atento.galexbh.dev/legal/${slug}`),
+      filter: (url) => !/\/(resultado|cribado|admin|api|offline)(\/|$)/.test(new URL(url).pathname),
+      // Mismo formato que <link rel="canonical"> (sin barra final).
+      serialize: (item) => ({
+        ...item,
+        url:
+          item.url.endsWith("/") && new URL(item.url).pathname !== "/"
+            ? item.url.slice(0, -1)
+            : item.url,
+      }),
+    }),
+  ],
   // El dev toolbar inyecta scripts inline que la CSP con nonce bloquearía (ver src/middleware.ts).
   devToolbar: { enabled: false },
   vite: {

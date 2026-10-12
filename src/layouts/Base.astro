@@ -2,6 +2,7 @@
 import "@/styles/global.css";
 import Cabecera from "@/components/Cabecera.astro";
 import Pie from "@/components/Pie.astro";
+import JsonLd from "@/components/seo/JsonLd.astro";
 
 interface Props {
   /** Título corto (se completa con " · Atento"). */
@@ -34,6 +35,43 @@ const urlCanonica = new URL(canonical ?? Astro.url.pathname, sitio).href;
 const urlImagenOg = new URL(imagenOg, sitio).href;
 const tituloCompleto = titulo.includes("Atento") ? titulo : `${titulo} · Atento`;
 const nonce = Astro.locals.nonce;
+
+// JSON-LD base (schema.org): WebSite + Organization en todas las páginas indexables y
+// BreadcrumbList en documentos largos (legal y metodología). Sin tipos "Medical*": Atento es
+// cribado comunitario, no un servicio médico.
+const organizacion = {
+  "@type": "Organization",
+  "@id": `${sitio.origin}/#organizacion`,
+  name: "Atento",
+  url: sitio.origin,
+  logo: new URL("/marca/logo.svg", sitio).href,
+  contactPoint: {
+    "@type": "ContactPoint",
+    email: "info@galexbh.dev",
+    contactType: "customer support",
+  },
+};
+const sitioWeb = {
+  "@type": "WebSite",
+  "@id": `${sitio.origin}/#sitio`,
+  name: "Atento",
+  url: sitio.origin,
+  inLanguage: "es-HN",
+  description:
+    "Cribado comunitario (no diagnóstico) de TDAH en niños y niñas de 6 a 12 años en Honduras.",
+  publisher: organizacion,
+};
+const ruta = Astro.url.pathname.replace(/\/$/, "");
+const conMigas = ruta === "/metodologia" || ruta.startsWith("/legal/");
+const migas = conMigas
+  ? {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Inicio", item: sitio.origin },
+        { "@type": "ListItem", position: 2, name: titulo, item: urlCanonica },
+      ],
+    }
+  : null;
 ---
 
 <!doctype html>
@@ -47,7 +85,9 @@ const nonce = Astro.locals.nonce;
     <link rel="canonical" href={urlCanonica} />
     <link rel="icon" href="/marca/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/marca/icono-192.png" />
-    <meta name="theme-color" content="#1f6f8b" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1f6f8b" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121a20" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Atento" />
     <meta property="og:title" content={tituloCompleto} />
@@ -60,6 +100,8 @@ const nonce = Astro.locals.nonce;
     <meta name="twitter:description" content={descripcion} />
     <meta name="twitter:image" content={urlImagenOg} />
     <meta name="csp-nonce" content={nonce} />
+    {!noindex && <JsonLd datos={sitioWeb} />}
+    {!noindex && migas && <JsonLd datos={migas} />}
     <slot name="head" />
     {/* Tema guardado (atento:tema) antes del primer pintado para evitar parpadeo. */}
     <script is:inline nonce={nonce}>
@@ -70,6 +112,19 @@ const nonce = Astro.locals.nonce;
         }
       } catch (e) {}
     </script>
+    {
+      /* Service worker (public/sw.js): app shell, modo sin conexión y cola de envíos.
+         Solo en build (preview/producción): en `astro dev` se saltaría la recarga en caliente. */
+      import.meta.env.PROD && (
+        <script is:inline nonce={nonce}>
+          if ("serviceWorker" in navigator) {
+            window.addEventListener("load", function () {
+              navigator.serviceWorker.register("/sw.js").catch(function () {});
+            });
+          }
+        </script>
+      )
+    }
   </head>
   <body class={claseCuerpo}>
     <a class="salto-contenido" href="#contenido">Ir al contenido</a>

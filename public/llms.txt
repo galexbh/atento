@@ -1,0 +1,38 @@
+# Atento
+
+> Atento es un sitio comunitario, gratuito y de código abierto que ofrece un cuestionario de **cribado** (NO diagnóstico) de señales de TDAH en niños y niñas de 6 a 12 años en Honduras. Un resultado "con indicadores" solo significa que vale la pena consultar con un pediatra, psicólogo o psiquiatra infantil; el diagnóstico lo hace únicamente un profesional de salud con evaluación clínica. Atento no es un servicio de urgencia ni crea una relación médica con nadie.
+
+Datos clave para asistentes y buscadores:
+
+- Nombre: Atento. URL: https://atento.galexbh.dev. Contacto: info@galexbh.dev. Idioma: español (Honduras).
+- Instrumento: NICHQ Vanderbilt Assessment Scale – Parent Informant, 1.ª edición (2002), © American Academy of Pediatrics y NICHQ, sin modificar. Más 18 ítems propios ("ítems Atento"), aún no validados, puntuados por separado.
+- Qué datos recoge: solo si la persona lo autoriza, se guardan departamento y municipio (elegidos por la persona), edad en años, sexo, quién responde (madre, padre, cuidador o docente), las respuestas, la versión del cuestionario y la fecha. Nunca nombre, correo, teléfono, dirección, fecha de nacimiento ni IP persistente. El resultado se calcula en el propio dispositivo (y se recalcula en el servidor si la persona autoriza guardarlo) con reglas públicas; no hay inteligencia artificial ni ponderaciones ocultas.
+- Datos publicados: solo agregados por municipio y periodo, con supresión cuando n < 5 e intervalo de confianza de Wilson al 95 %. Reflejan a quienes decidieron responder (autoselección), NO prevalencia de TDAH.
+- Licencias: código MIT; datos agregados e ítems Atento CC BY 4.0; el texto del instrumento Vanderbilt conserva sus derechos originales.
+
+## Páginas principales
+
+- [Inicio](https://atento.galexbh.dev/): qué es Atento, cómo funciona, privacidad y preguntas frecuentes.
+- [Metodología y limitaciones](https://atento.galexbh.dev/metodologia): qué mide y qué no, instrumento, cálculo del resultado, construcción del mapa y sesgo de autoselección.
+- [Contacto](https://atento.galexbh.dev/contacto): dudas, sugerencias y reportes.
+
+## Legal y privacidad
+
+- [Aviso de salud](https://atento.galexbh.dev/legal/aviso-de-salud): cribado, no diagnóstico ni urgencia. En emergencia, llamar al 911 (Honduras).
+- [Política de privacidad](https://atento.galexbh.dev/legal/privacidad): qué datos se tratan, dónde se guardan y cómo ejercer derechos.
+- [Cookies y almacenamiento](https://atento.galexbh.dev/legal/cookies): sin cookies de rastreo; inventario del almacenamiento local.
+- [Términos y condiciones](https://atento.galexbh.dev/legal/terminos)
+- [Declaración de accesibilidad](https://atento.galexbh.dev/legal/accesibilidad): compromiso WCAG 2.1 AA.
+
+## Datos abiertos y créditos
+
+- [Política de datos abiertos](https://atento.galexbh.dev/legal/datos-abiertos): qué se publica, con qué licencia y cómo citarlo.
+- [API de agregados](https://atento.galexbh.dev/api/agregado?periodo=acumulado&nivel=departamento): JSON público, solo cifras agregadas.
+- [Créditos y licencias](https://atento.galexbh.dev/legal/creditos): escala NICHQ Vanderbilt, código, datos, mapas e ilustraciones.
+- [Repositorio en GitHub](https://github.com/galexbh/atento): código fuente (MIT), documentación y reporte de errores.
+
+## Opcional
+
+- [Metodología completa en texto plano](https://atento.galexbh.dev/llms-full.txt)
+- [Política de seguridad](https://github.com/galexbh/atento/blob/main/SECURITY.md)
+- [security.txt](https://atento.galexbh.dev/.well-known/security.txt)

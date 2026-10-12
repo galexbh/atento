@@ -1,0 +1,48 @@
+name: Texto confuso o mejorable
+description: Una pregunta, resultado, aviso o página que no se entiende, suena mal o puede inducir a error.
+title: "[Texto] "
+labels: ["texto", "pendiente-revision-clinica"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Los textos que ven las familias importan tanto como el código. Si algo no se entiende en
+        Honduras, suena a diagnóstico, culpa o etiqueta, o tiene un error, cuéntanoslo.
+        Recuerda: los ítems de la escala NICHQ Vanderbilt no se pueden cambiar; los textos
+        propios de Atento sí.
+  - type: input
+    id: donde
+    attributes:
+      label: Dónde está el texto
+      description: Página y, si aplica, número de pregunta o título de la sección.
+      placeholder: /cribado/cuestionario, pregunta 14 / /resultado, aviso de salud
+    validations:
+      required: true
+  - type: textarea
+    id: texto-actual
+    attributes:
+      label: Texto actual
+      description: Cópialo tal cual aparece.
+    validations:
+      required: true
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qué problema tiene
+      description: No se entiende, es ambiguo, suena a diagnóstico, no es como se dice en Honduras, tiene un error...
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta de redacción (opcional)
+  - type: dropdown
+    id: perfil
+    attributes:
+      label: Desde qué perfil lo lees
+      options:
+        - Madre, padre o cuidador
+        - Docente
+        - Profesional de salud
+        - Persona que desarrolla o traduce
+        - Otro

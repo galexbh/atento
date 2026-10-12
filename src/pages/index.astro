@@ -1,4 +1,5 @@
 ---
+import JsonLd from "@/components/seo/JsonLd.astro";
 import { icono, ilustracion } from "@/components/svg";
 import Base from "@/layouts/Base.astro";
 
@@ -53,6 +54,17 @@ const faq = [
   descripcion="Una orientación gratuita y anónima para saber si vale la pena consultar a un profesional por señales de TDAH en niños y niñas de 6 a 12 años. Honduras."
   canonical="/"
 >
+  <JsonLd
+    slot="head"
+    datos={{
+      "@type": "FAQPage",
+      mainEntity: faq.map((f) => ({
+        "@type": "Question",
+        name: f.p,
+        acceptedAnswer: { "@type": "Answer", text: f.r },
+      })),
+    }}
+  />
   <section class="hero" aria-labelledby="hero-titulo">
     <div class="hero__foto" aria-hidden="true">
       <picture>

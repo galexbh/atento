@@ -1,0 +1,57 @@
+# Registro de cambios
+
+Todos los cambios notables de Atento se documentan aquí. El formato sigue
+[Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
+[versionado semántico](https://semver.org/lang/es/). Los cambios que afectan a datos publicados
+se anotan además en la política de datos abiertos.
+
+## [Unreleased]
+
+### Pendiente
+
+- Revisión clínica de los textos que ven las familias (cuestionario, resultado, avisos).
+- Revisión legal de las páginas de `/legal/*` (marcadas como borrador 0.1).
+- Confirmación de la línea de emergencia y recursos de salud mental en Honduras.
+- Icono `maskable` a sangre completa para el manifest (el actual tiene esquinas transparentes).
+- Validación en Honduras de la traducción de la escala y de los ítems Atento (socio académico).
+
+## [0.1.0] - 2026-10-11
+
+Primera versión funcional, desplegable en Cloudflare Workers.
+
+### Añadido
+
+- Landing (`/`) con explicación de qué es un cribado, cómo funciona, privacidad en tres frases y
+  preguntas frecuentes.
+- Flujo de cribado: consentimiento informado (`/cribado/consentimiento`), datos no identificables
+  del niño o niña (`/cribado/datos`) y cuestionario (`/cribado/cuestionario`) con la escala NICHQ
+  Vanderbilt para padres, 1.ª ed. (2002), más 18 ítems Atento puntuados por separado. Progreso
+  guardado en `localStorage` y envío opcional con Turnstile y honeypot.
+- Página de resultado (`/resultado`) con aviso de salud, nivel orientativo, gráfico por área,
+  alertas, código de vínculo para el docente y descarga en PDF. No indexable.
+- API: `POST /api/respuesta` (validación estricta `zod`, límite 5 envíos/hora/IP con hash y sal,
+  puntuación en servidor, fecha sin hora), `GET /api/agregado`, `GET /api/agregado/periodos`,
+  `GET /api/geo` y `GET /api/salud`.
+- Agregados por municipio y periodo con supresión `n < 5`, intervalo de Wilson 95 %, cron diario y
+  snapshot anual congelado.
+- Panel de administración (`/admin`) con resumen, geografía, demografía, calidad, desempeño,
+  comorbilidad y exportación de agregados.
+- Páginas legales (`/legal/*`): términos, privacidad, aviso de salud, cookies y almacenamiento,
+  accesibilidad, datos abiertos, créditos y licencias. Metodología pública (`/metodologia`) y
+  contacto.
+- Seguridad: CSP estricta con nonce por petición, HSTS, verificación de `Origin` en la API, modo
+  mantenimiento.
+- SEO y descubribilidad: sitemap (`@astrojs/sitemap`) sin rutas de flujo ni admin, `robots.txt`,
+  JSON-LD `WebSite`/`Organization`, `BreadcrumbList` (legal y metodología) y `FAQPage` en la
+  portada, `llms.txt` y `llms-full.txt`, `humans.txt`, `security.txt` (RFC 9116).
+- PWA ligera: `manifest.webmanifest`, `theme-color` claro/oscuro, service worker con app shell,
+  modo sin conexión (`/offline`) y cola de envíos en IndexedDB con Background Sync.
+- Accesibilidad: WCAG 2.1 AA verificada con axe en las pruebas e2e; modo oscuro y
+  `prefers-reduced-motion`.
+- Calidad: Biome, lefthook, Renovate, Vitest (Node y workerd), Playwright, CI en GitHub Actions.
+- Documentación: marco clínico, instrumento, legal, metodología pública, recursos de Honduras,
+  propuesta a socio académico, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, plantillas
+  de issue y PR.
+
+[Unreleased]: https://github.com/galexbh/atento/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/galexbh/atento/releases/tag/v0.1.0

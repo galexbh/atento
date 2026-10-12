@@ -1,0 +1,17 @@
+/* EQUIPO */
+Autor: Gabriel Barrientos (galexbh)
+Contacto: info@galexbh.dev
+Sitio: https://atento.galexbh.dev
+Código: https://github.com/galexbh/atento
+Desde: Honduras
+
+/* AGRADECIMIENTOS */
+NICHQ y American Academy of Pediatrics: escala Vanderbilt, 1.ª ed. (2002).
+Familias, docentes y profesionales de salud que revisan los textos.
+
+/* SITIO */
+Última actualización: 2026-10-11
+Idioma: español (Honduras)
+Herramientas: Astro, Cloudflare Workers, D1, TypeScript, Biome, Playwright
+Tipografía: fuentes del sistema
+Licencias: MIT (código), CC BY 4.0 (datos agregados e ítems Atento)

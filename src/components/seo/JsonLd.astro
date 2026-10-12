@@ -1,0 +1,17 @@
+---
+/**
+ * Inserta un bloque JSON-LD (schema.org) en el <head>.
+ * Uso: <JsonLd slot="head" datos={{ "@type": "FAQPage", ... }} />
+ * Añade "@context" si falta y escapa "<" para que el JSON no pueda cerrar el <script>.
+ * Lleva el nonce de la CSP por coherencia (los bloques ld+json no se ejecutan, pero así
+ * ningún auditor lo marca como script inline sin nonce).
+ */
+interface Props {
+  datos: Record<string, unknown>;
+}
+
+const { datos } = Astro.props;
+const json = JSON.stringify({ "@context": "https://schema.org", ...datos }).replace(/</g, "\u003c");
+---
+
+<script is:inline type="application/ld+json" nonce={Astro.locals.nonce} set:html={json} />
