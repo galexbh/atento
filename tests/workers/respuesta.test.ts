@@ -49,8 +49,11 @@ function enviar(cuerpo: unknown, opciones: { tipo?: string; ip?: string } = {}) 
   });
 }
 
-/** Mockea siteverify: `exito` controla el resultado; registra las llamadas. */
-function mockSiteverify(exito: boolean) {
+/**
+ * Mockea siteverify: `exito` controla `success`; `extra` permite simular otra acción u otro host.
+ * Por defecto devuelve la acción del envío y el host de SITE_URL (atento.galexbh.dev).
+ */
+function mockSiteverify(exito: boolean, extra: { action?: string; hostname?: string } = {}) {
   const original = globalThis.fetch;
   const llamadas: string[] = [];
   vi.stubGlobal("fetch", (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -58,7 +61,13 @@ function mockSiteverify(exito: boolean) {
       typeof entrada === "string" ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
     if (url === SITEVERIFY) {
       llamadas.push(url);
-      return Promise.resolve(Response.json({ success: exito }));
+      return Promise.resolve(
+        Response.json({
+          success: exito,
+          action: extra.action ?? "envio-respuesta",
+          hostname: extra.hostname ?? "atento.galexbh.dev",
+        }),
+      );
     }
     return original(entrada, init);
   });
@@ -177,6 +186,24 @@ describe("POST /api/respuesta", () => {
       .first();
     expect(fila).toBeNull();
     expect(llamadasSiteverify).toHaveLength(0);
+  });
+
+  it("Turnstile con acción de otra superficie -> 403", async () => {
+    vi.unstubAllGlobals();
+    mockSiteverify(true, { action: "otra-accion" });
+    const r = await enviar(envioValido(), { ip: "198.51.100.61" });
+    expect(r.status).toBe(403);
+  });
+
+  it("Turnstile emitido para otro host (o localhost en producción) -> 403", async () => {
+    vi.unstubAllGlobals();
+    mockSiteverify(true, { hostname: "localhost" });
+    const r1 = await enviar(envioValido(), { ip: "198.51.100.62" });
+    expect(r1.status).toBe(403);
+    vi.unstubAllGlobals();
+    mockSiteverify(true, { hostname: "malo.example" });
+    const r2 = await enviar(envioValido(), { ip: "198.51.100.63" });
+    expect(r2.status).toBe(403);
   });
 
   it("Turnstile inválido -> 403 y sin fila; la cuota se consume igualmente (B2)", async () => {

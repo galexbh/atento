@@ -10,11 +10,17 @@ const items = ordenarItems(INSTRUMENTO_ACTUAL);
 const paginas = totalPaginas(items);
 
 /**
- * Clave de sitio de Turnstile. Sin `PUBLIC_TURNSTILE_SITE_KEY` en el entorno se usa la clave de
- * pruebas pública de Cloudflare "1x00000000000000000000AA" (siempre pasa, solo para desarrollo).
- * En producción debe definirse la clave real (variable pública de build) y el secreto en el Worker.
+ * Clave de sitio de Turnstile (es pública; el secreto vive solo en el Worker como TURNSTILE_SECRET).
+ * - Build de producción o preview: widget "atento.galexbh.dev (Spin)", dominios atento.galexbh.dev,
+ *   atento-preview.galexbh.dev, localhost y 127.0.0.1.
+ * - `astro dev`: clave de pruebas de Cloudflare "1x00000000000000000000AA" (siempre pasa).
+ * `PUBLIC_TURNSTILE_SITE_KEY` permite sustituirla sin tocar el código.
  */
-const claveTurnstile = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+const CLAVE_SITIO_PRODUCCION = "0x4AAAAAAFUM2SiQtialMd1m";
+const CLAVE_SITIO_PRUEBAS = "1x00000000000000000000AA";
+const claveTurnstile =
+  import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ||
+  (import.meta.env.PROD ? CLAVE_SITIO_PRODUCCION : CLAVE_SITIO_PRUEBAS);
 
 // Iconos para los ítems de desempeño (V48–V54), que son solo una palabra.
 const ICONOS_DESEMPENO: Record<string, string> = {

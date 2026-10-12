@@ -1,3 +1,4 @@
+import { ACCION_ENVIO } from "@/lib/compartido/turnstile";
 /**
  * Lógica de cliente del cuestionario (/cribado/cuestionario).
  *
@@ -247,6 +248,7 @@ export function iniciarCuestionario(raiz: HTMLElement): void {
     if (typeof window.turnstile?.render !== "function" || turnstileId !== undefined) return;
     turnstileId = window.turnstile.render(contenedorTurnstile, {
       sitekey: claveTurnstile,
+      action: ACCION_ENVIO,
       language: "es",
       theme: "auto",
       callback: (token: string) => {
@@ -363,6 +365,11 @@ export function iniciarCuestionario(raiz: HTMLElement): void {
         hp,
       });
       guardado.guardado = ok;
+      // Los tokens son de un solo uso: si el envío falló, se pide uno nuevo antes de reintentar.
+      if (!ok && turnstileId !== undefined) {
+        window.turnstile?.reset?.(turnstileId);
+        turnstileToken = "";
+      }
       botonEnviar.disabled = false;
     }
 

@@ -6,6 +6,7 @@
  * departamento hace fallar la validación.
  */
 import { z } from "zod";
+import { LONGITUD_MAXIMA_TOKEN } from "@/lib/compartido/turnstile";
 import { esMunicipioValido, obtenerDepartamento } from "../catalogo/geo";
 import { listarInstrumentos, obtenerInstrumento } from "../puntuacion/instrumentos";
 import { RANGO_VALOR } from "../puntuacion/puntuar";
@@ -50,7 +51,7 @@ export const EsquemaEnvio = z
       .string()
       .regex(CODIGO_VINCULO, "codigoVinculo: 8 caracteres alfanuméricos")
       .optional(),
-    turnstileToken: z.string().min(1).max(4096),
+    turnstileToken: z.string().min(1).max(LONGITUD_MAXIMA_TOKEN),
     /** Honeypot: debe venir vacío. */
     hp: z.string().max(0, "hp debe estar vacío"),
   })
