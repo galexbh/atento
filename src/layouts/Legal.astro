@@ -30,14 +30,20 @@ const indice = encabezados.filter((h) => h.depth === 2);
       {
         indice.length > 1 && (
           <nav class="indice" aria-labelledby="indice-titulo">
-            <h2 id="indice-titulo">En esta página</h2>
-            <ol>
-              {indice.map((h) => (
-                <li>
-                  <a href={`#${h.slug}`}>{h.text}</a>
-                </li>
-              ))}
-            </ol>
+            {/* Abierto por defecto (sin JS); el script lo pliega en pantallas angostas. */}
+            <details class="indice__plegable" open data-indice>
+              <summary id="indice-titulo">En esta página</summary>
+              {/* Lista sin números: los títulos ya traen su numeración. */}
+              <ul>
+                {indice.map((h) => (
+                  <li>
+                    <a href={`#${h.slug}`} data-seccion={h.slug}>
+                      {h.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </nav>
         )
       }
@@ -46,6 +52,44 @@ const indice = encabezados.filter((h) => h.depth === 2);
       </div>
     </div>
   </article>
+  <script is:inline nonce={Astro.locals.nonce}>
+    (() => {
+      const plegable = document.querySelector("[data-indice]");
+      if (!plegable) return;
+      const ancho = window.matchMedia("(min-width: 56rem)");
+      const ajustar = () => {
+        plegable.open = ancho.matches;
+      };
+      ajustar();
+      ancho.addEventListener("change", ajustar);
+
+      // En móvil, al elegir una sección se cierra el índice.
+      plegable.addEventListener("click", (e) => {
+        if (e.target instanceof HTMLAnchorElement && !ancho.matches) plegable.open = false;
+      });
+
+      // Resalta la sección visible.
+      const enlaces = new Map(
+        [...plegable.querySelectorAll("a[data-seccion]")].map((a) => [a.dataset.seccion, a]),
+      );
+      const titulos = [...enlaces.keys()].map((id) => document.getElementById(id)).filter(Boolean);
+      if (!("IntersectionObserver" in window) || titulos.length === 0) return;
+      const marcar = (id) => {
+        for (const [clave, a] of enlaces) {
+          if (clave === id) a.setAttribute("aria-current", "location");
+          else a.removeAttribute("aria-current");
+        }
+      };
+      const observador = new IntersectionObserver(
+        (entradas) => {
+          const visible = entradas.filter((e) => e.isIntersecting)[0];
+          if (visible) marcar(visible.target.id);
+        },
+        { rootMargin: "-15% 0px -70% 0px" },
+      );
+      for (const t of titulos) observador.observe(t);
+    })();
+  </script>
 </Base>
 
 <style>
@@ -71,26 +115,68 @@ const indice = encabezados.filter((h) => h.depth === 2);
     background: var(--color-superficie);
     border: var(--borde-ancho) solid var(--color-borde);
     border-radius: var(--radio-grande);
-    padding: var(--espacio-3) var(--espacio-4);
+    padding: var(--espacio-2) var(--espacio-4);
   }
-  .indice h2 {
+  .indice summary {
     font-size: 0.85rem;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    margin: 0 0 var(--espacio-2);
     color: var(--color-texto-suave);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 2.75rem;
   }
-  .indice ol {
+  .indice summary::-webkit-details-marker {
+    display: none;
+  }
+  .indice summary::after {
+    content: "";
+    width: 0.55rem;
+    height: 0.55rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.2s ease;
+  }
+  .indice__plegable[open] summary::after {
+    transform: rotate(-135deg) translateY(-2px);
+  }
+  .indice summary:focus-visible {
+    outline: 3px solid var(--color-foco);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .indice a[aria-current] {
+    color: var(--color-primario-fuerte);
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--color-primario);
+    padding-left: 0.6rem;
+    margin-left: -0.6rem;
+  }
+  .indice ul {
+    list-style: none;
     margin: 0;
-    padding-left: 1.25rem;
+    padding: 0;
     font-size: 0.95rem;
   }
   .indice li {
     margin: 0;
   }
   .indice a {
-    display: inline-block;
-    padding: 0.25rem 0;
+    display: block;
+    padding: 0.4rem 0;
+    line-height: 1.35;
+    text-decoration: none;
+    color: var(--color-texto);
+  }
+  .indice a:hover,
+  .indice a:focus-visible {
+    color: var(--color-primario-fuerte);
+    text-decoration: underline;
   }
   .prosa :global(h2:first-child) {
     margin-top: 0;
@@ -99,14 +185,35 @@ const indice = encabezados.filter((h) => h.depth === 2);
     scroll-margin-top: 5rem;
   }
   @media (min-width: 56rem) {
+    /* Índice angosto a la izquierda; el texto ocupa el resto. */
     .documento__cuerpo {
-      grid-template-columns: 16rem minmax(0, 1fr);
-      gap: var(--espacio-5);
+      grid-template-columns: 15rem minmax(0, 1fr);
+      gap: var(--espacio-6);
     }
     .indice {
       position: sticky;
-      top: 5rem;
-      order: 2;
+      top: 5.5rem;
+      max-height: calc(100vh - 7rem);
+      overflow-y: auto;
+      padding: var(--espacio-3);
+    }
+    .indice ul {
+      font-size: 0.9rem;
+    }
+    /* En escritorio el índice siempre está abierto: el título no es un botón. */
+    .indice summary {
+      cursor: default;
+      pointer-events: none;
+      min-height: 0;
+      margin-bottom: var(--espacio-2);
+    }
+    .indice summary::after {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .indice summary::after {
+      transition: none;
     }
   }
 </style>
