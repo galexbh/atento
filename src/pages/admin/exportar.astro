@@ -42,7 +42,7 @@ const reportes = NOMBRES_REPORTE.filter((n) => n !== "resumen");
         <a class="boton boton--secundario" href="/api/admin/exportar?tipo=codebook" download>Codebook (Markdown)</a>
       </p>
     ) : (
-      <p class="aviso">Tu rol ({auth.rol}) no permite descargar microdatos. El codebook sí está disponible: <a href="/api/admin/exportar?tipo=codebook" download>descargar</a>.</p>
+      <p class="aviso">La descarga de microdatos está reservada a la administración del proyecto. El diccionario de datos sí está disponible: <a href="/api/admin/exportar?tipo=codebook" download>descargar</a>.</p>
     )}
     <p class="panel__nota">Uso bajo acuerdo con el socio académico. La exportación registra usuario, filtros y número de filas en <code>auditoria_admin</code>.</p>
   </section>

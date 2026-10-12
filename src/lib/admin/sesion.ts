@@ -3,6 +3,7 @@
  * (POST a /admin/entrar, /admin/salir, /admin/sistema) como los endpoints /api/admin/*.
  */
 import { env } from "cloudflare:workers";
+import type { Rol } from "./acceso";
 import {
   cabeceraBorrarCookie,
   cabeceraCookieSesion,
@@ -35,6 +36,28 @@ function cookieSegura(): boolean {
   return env.ENTORNO !== "local";
 }
 
+/** Nombre visible de cada rol (también queda en la auditoría). */
+export const NOMBRE_ROL: Record<Rol, string> = {
+  admin: "Administración",
+  investigador: "Investigación",
+};
+
+/**
+ * Rol que corresponde a la contraseña: la de administración (ADMIN_PASSWORD_HASH) o, si existe,
+ * la de investigación (INVESTIGADOR_PASSWORD_HASH, ver `scripts/acceso-investigador.ts`).
+ * Se comprueban siempre las dos para no revelar por tiempo cuál coincidió.
+ */
+async function rolDeContrasena(contrasena: string, hashAdmin: string): Promise<Rol | null> {
+  const hashInvestigador = env.INVESTIGADOR_PASSWORD_HASH;
+  const [esAdmin, esInvestigador] = await Promise.all([
+    verificarContrasena(contrasena, hashAdmin),
+    hashInvestigador ? verificarContrasena(contrasena, hashInvestigador) : Promise.resolve(false),
+  ]);
+  if (esAdmin) return "admin";
+  if (esInvestigador) return "investigador";
+  return null;
+}
+
 /**
  * Entrada con contraseña (solo ADMIN_MODO = "password"): verifica contra ADMIN_PASSWORD_HASH,
  * limita a 5 intentos/15 min por hash de IP (KV) y emite la cookie de sesión firmada.
@@ -57,13 +80,14 @@ export async function procesarEntrar(request: Request): Promise<Response> {
   const contrasena = String(datos?.get("contrasena") ?? "");
   const volverBruto = String(datos?.get("volver") ?? "/admin");
   const volver = /^\/admin(\/[\w\-/?=&%.]*)?$/.test(volverBruto) ? volverBruto : "/admin";
-  if (!contrasena || !(await verificarContrasena(contrasena, hash))) {
+  const rol = contrasena ? await rolDeContrasena(contrasena, hash) : null;
+  if (!rol) {
     const intentos = await registrarIntentoFallido(env.CACHE, ip, sal);
     return redirigir(`/admin/entrar?error=${intentos >= 5 ? "bloqueado" : "credenciales"}`);
   }
   await limpiarIntentos(env.CACHE, ip, sal);
-  const usuario = "admin (password)";
-  const cookie = await crearSesion(secreto, usuario, "admin");
+  const usuario = NOMBRE_ROL[rol];
+  const cookie = await crearSesion(secreto, usuario, rol);
   await registrarAuditoria(usuario, "entrar", null, null);
   return redirigir(volver, { "Set-Cookie": cabeceraCookieSesion(cookie, cookieSegura()) });
 }

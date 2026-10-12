@@ -27,7 +27,8 @@
     "seed": "tsx scripts/seed.ts",
     "agregar:local": "tsx scripts/agregar-local.ts",
     "prepare": "lefthook install",
-    "test:admin": "vitest run -c vitest.admin.config.ts"
+    "test:admin": "vitest run -c vitest.admin.config.ts",
+    "acceso:investigador": "tsx scripts/acceso-investigador.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.3.4",

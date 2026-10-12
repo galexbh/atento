@@ -9,6 +9,7 @@ import { expect, test } from "@playwright/test";
  * scripts/seed-admin.sql). Las capturas van a docs/privado/capturas/ (no se publican).
  */
 const CONTRASENA = process.env.ADMIN_E2E_PASSWORD ?? "atento-admin-local-2026";
+const CONTRASENA_INVESTIGADOR = process.env.INVESTIGADOR_E2E_PASSWORD ?? "investigacion-local-2026";
 
 test.describe("panel de administración", () => {
   test("sin sesión redirige a /admin/entrar", async ({ page }) => {
@@ -108,5 +109,20 @@ test.describe("panel de administración", () => {
     await page.getByLabel("Contraseña").fill("contrasena-incorrecta-123");
     await page.getByRole("button", { name: "Entrar" }).click();
     await expect(page.getByRole("alert")).toContainText("No pudimos iniciar tu sesión");
+  });
+
+  test("rol investigador: solo lectura y sin filtros finos", async ({ page }) => {
+    await page.goto("/admin/entrar?volver=/admin");
+    await page.getByLabel("Contraseña").fill(CONTRASENA_INVESTIGADOR);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.waitForURL(/\/admin$/);
+    await expect(page.locator(".admin__nombre")).toHaveText("Investigación");
+    await expect(page.locator(".admin__rol")).toHaveText("Solo lectura");
+    const nav = page.getByRole("navigation", { name: "Secciones del panel" });
+    await expect(nav.getByRole("link", { name: "Sistema" })).toHaveCount(0);
+    expect((await page.goto("/admin/sistema"))?.status()).toBe(403);
+    const fino = await page.goto("/admin/geografia?periodo=acumulado&municipio=0801&sexo=F");
+    expect(fino?.status()).toBe(403);
+    expect((await page.goto("/admin/geografia?periodo=acumulado"))?.status()).toBe(200);
   });
 });

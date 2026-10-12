@@ -26,6 +26,8 @@ declare namespace Cloudflare {
     ADMIN_MODO?: "access" | "password";
     /** Hash PBKDF2 de la contraseña de respaldo (`pbkdf2$<iter>$<sal>$<hash>`). */
     ADMIN_PASSWORD_HASH?: string;
+    /** Opcional: contraseña del rol investigador en modo password (scripts/acceso-investigador.ts). */
+    INVESTIGADOR_PASSWORD_HASH?: string;
     /** Secreto HMAC de la cookie de sesión y de los seudónimos de microdatos (obligatorio en producción). */
     ADMIN_SESSION_SECRET?: string;
   }

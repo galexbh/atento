@@ -61,12 +61,14 @@ jobs:
       - name: Variables locales para las pruebas (.dev.vars no está en el repo)
         run: |
           HASH=$(pnpm exec tsx scripts/hash-password.ts "atento-admin-local-2026" | grep -E '^pbkdf2\$' | tail -1)
+          HASH_INV=$(pnpm exec tsx scripts/hash-password.ts "investigacion-local-2026" | grep -E '^pbkdf2\$' | tail -1)
           {
             echo "ENTORNO=local"
             echo "TURNSTILE_SECRET="
             echo "RATE_SALT=sal-de-pruebas-ci"
             echo "ADMIN_MODO=password"
             echo "ADMIN_PASSWORD_HASH=$HASH"
+            echo "INVESTIGADOR_PASSWORD_HASH=$HASH_INV"
             echo "ADMIN_SESSION_SECRET=secreto-de-sesion-ci"
           } > .dev.vars
       - name: Migraciones y datos sintéticos en la D1 local

@@ -2,7 +2,10 @@ import path from "node:path";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 import { generarHash } from "./src/lib/admin/password";
-import { CONTRASENA_PRUEBA } from "./tests/workers/admin-constantes";
+import {
+  CONTRASENA_INVESTIGADOR_PRUEBA,
+  CONTRASENA_PRUEBA,
+} from "./tests/workers/admin-constantes";
 
 // Pruebas del panel /admin dentro de workerd, con D1 real migrada y modo password activado.
 export default defineConfig({
@@ -10,6 +13,7 @@ export default defineConfig({
     cloudflareTest(async () => {
       const migrations = await readD1Migrations(path.join(import.meta.dirname, "migrations"));
       const hash = await generarHash(CONTRASENA_PRUEBA);
+      const hashInvestigador = await generarHash(CONTRASENA_INVESTIGADOR_PRUEBA);
       return {
         wrangler: { configPath: "./wrangler.jsonc" },
         main: "./tests/workers/entrada-admin.ts",
@@ -20,6 +24,7 @@ export default defineConfig({
             RATE_SALT: "sal-de-prueba",
             ADMIN_MODO: "password",
             ADMIN_PASSWORD_HASH: hash,
+            INVESTIGADOR_PASSWORD_HASH: hashInvestigador,
             ADMIN_SESSION_SECRET: "secreto-de-sesion-solo-para-pruebas",
             ADMIN_EMAILS: "admin@ejemplo.org",
             INVESTIGADOR_EMAILS: "investigador@ejemplo.org",

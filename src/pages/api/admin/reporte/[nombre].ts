@@ -1,24 +1,15 @@
 import { env } from "cloudflare:workers";
 import type { APIRoute } from "astro";
 import { protegerApi, registrarAuditoria } from "@/lib/admin/proteger";
+import { validarFiltrosInvestigador } from "@/lib/admin/restricciones";
 import { esNombreReporte, reporteConMeta } from "@/lib/reportes";
-import { type Filtros, parsearFiltros } from "@/lib/reportes/filtros";
+import { parsearFiltros } from "@/lib/reportes/filtros";
 
 /**
  * Para el rol investigador, `municipio` no puede combinarse con edad, sexo o informante, ni con
  * periodos mensuales: ese cruce fino permitiría aislar respuestas individuales aunque las celdas
  * pequeñas se supriman. Devuelve el motivo del rechazo o null.
  */
-export function validarFiltrosInvestigador(filtros: Filtros): string | null {
-  if (!filtros.municipio) return null;
-  const finos: string[] = [];
-  if (filtros.edadMin !== undefined || filtros.edadMax !== undefined) finos.push("edad");
-  if (filtros.sexo) finos.push("sexo");
-  if (filtros.informante) finos.push("informante");
-  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(filtros.periodo)) finos.push("periodo mensual");
-  if (finos.length === 0) return null;
-  return `el rol investigador no puede combinar municipio con ${finos.join(", ")}`;
-}
 
 /**
  * GET /api/admin/reporte/<nombre>?periodo=2026&departamento=08...

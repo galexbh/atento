@@ -26,3 +26,5 @@ ACCESS_TEAM_DOMAIN=
 ACCESS_AUD=
 ADMIN_EMAILS=
 INVESTIGADOR_EMAILS=
+# Opcional: rol investigador en modo password (genera y sube con `pnpm acceso:investigador`).
+INVESTIGADOR_PASSWORD_HASH=

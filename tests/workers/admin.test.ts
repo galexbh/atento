@@ -17,7 +17,7 @@ import { generarFilas, SQL_INSERT, valoresInsert } from "@/lib/admin/sintetico";
 import { construirFila, parametrosRespuesta, SQL_INSERTAR_RESPUESTA } from "@/lib/db/respuestas";
 import { obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
 import type { Envio } from "@/lib/validacion/respuesta";
-import { CONTRASENA_PRUEBA } from "./admin-constantes";
+import { CONTRASENA_INVESTIGADOR_PRUEBA, CONTRASENA_PRUEBA } from "./admin-constantes";
 
 const BASE = "https://atento.galexbh.dev";
 
@@ -96,6 +96,34 @@ describe("autenticación del panel (modo password)", () => {
     expect(cuerpo.meta.reporte).toBe("resumen");
     const codebook = await get("/api/admin/exportar?tipo=codebook", cookie);
     expect(codebook.status).toBe(200);
+  });
+
+  it("la contraseña de investigación da sesión de solo lectura", async () => {
+    const r = await entrar(CONTRASENA_INVESTIGADOR_PRUEBA, "203.0.113.41");
+    expect(r.status).toBe(303);
+    const cookie = (r.headers.get("Set-Cookie") ?? "").split(";")[0] as string;
+    const sesion = await verificarSesion(
+      env.ADMIN_SESSION_SECRET as string,
+      cookie.slice(NOMBRE_COOKIE.length + 1),
+    );
+    expect(sesion?.r).toBe("investigador");
+    expect(sesion?.u).toBe("Investigación");
+    expect((await get("/api/admin/reporte/resumen?periodo=2026", cookie)).status).toBe(200);
+    expect((await get("/api/admin/exportar?tipo=agregados", cookie)).status).toBe(200);
+    expect((await get("/api/admin/exportar?tipo=microdatos", cookie)).status).toBe(403);
+    expect(
+      (await get("/api/admin/reporte/resumen?periodo=2026&municipio=0801&sexo=F", cookie)).status,
+    ).toBe(403);
+  });
+
+  it("la sesión de administración se identifica como Administración", async () => {
+    const r = await entrar(CONTRASENA_PRUEBA, "203.0.113.42");
+    const cookie = (r.headers.get("Set-Cookie") ?? "").split(";")[0] as string;
+    const sesion = await verificarSesion(
+      env.ADMIN_SESSION_SECRET as string,
+      cookie.slice(NOMBRE_COOKIE.length + 1),
+    );
+    expect(sesion).toMatchObject({ r: "admin", u: "Administración" });
   });
 
   it("M6: la sesión lleva iat y 'cerrar todas las sesiones' invalida las anteriores", async () => {

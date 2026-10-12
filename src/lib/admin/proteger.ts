@@ -8,6 +8,7 @@
  * También registra la auditoría de exportaciones y consultas de microdatos.
  */
 import { env } from "cloudflare:workers";
+import { parsearFiltros } from "@/lib/reportes/filtros";
 import {
   extraerTokenAccess,
   type Rol,
@@ -16,6 +17,7 @@ import {
   verificarJwtAccess,
 } from "./acceso";
 import { leerCookie, NOMBRE_COOKIE, verificarSesion } from "./password";
+import { validarFiltrosInvestigador } from "./restricciones";
 
 export type { Rol, Usuario } from "./acceso";
 
@@ -141,6 +143,20 @@ export async function protegerPagina(
       status: 403,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
+  }
+  const url = new URL(request.url);
+  if (url.search) {
+    const filtros = parsearFiltros(url.searchParams);
+    if (usuario.rol === "investigador") {
+      const motivo = validarFiltrosInvestigador(filtros);
+      if (motivo) {
+        return new Response(
+          `Esta combinación de filtros no está disponible: ${motivo}. Quita alguno de los filtros y vuelve a intentarlo.`,
+          { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+        );
+      }
+    }
+    await registrarAuditoria(usuario, "consulta", { pagina: url.pathname, ...filtros }, null);
   }
   return usuario;
 }

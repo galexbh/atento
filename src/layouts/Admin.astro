@@ -38,6 +38,9 @@ const NAV: Array<{ id: string; ruta: string; etiqueta: string }> = [
   { id: "sistema", ruta: "/admin/sistema", etiqueta: "Sistema" },
 ];
 const consulta = Astro.url.search;
+const ETIQUETA_ROL = { admin: "Acceso completo", investigador: "Solo lectura" } as const;
+/** Inicial para el avatar: primera letra del nombre o del correo. */
+const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
 ---
 
 <!doctype html>
@@ -63,7 +66,7 @@ const consulta = Astro.url.search;
         <nav aria-label="Secciones del panel">
           <ul class="admin__nav">
             {
-              NAV.map((item) => (
+              NAV.filter((item) => item.id !== "sistema" || usuario?.rol === "admin").map((item) => (
                 <li>
                   <a
                     href={`${item.ruta}${item.id === "sistema" || item.id === "exportar" ? "" : consulta}`}
@@ -79,21 +82,28 @@ const consulta = Astro.url.search;
         )}
         {
           usuario && (
-            <div class="admin__usuario">
-              <p>
-                <strong>{usuario.email}</strong>
-                <br />
-                <span class="admin__rol">rol: {usuario.rol}</span>
-              </p>
-              {modoPassword && (
-                <form method="post" action="/admin/salir">
-                  <button type="submit" class="boton boton--secundario">Salir</button>
-                </form>
-              )}
+            <div class="admin__cuenta">
+              <div class="admin__persona">
+                <span class="admin__avatar" aria-hidden="true">{iniciales(usuario.email)}</span>
+                <span class="admin__identidad">
+                  <span class="admin__nombre">{usuario.email}</span>
+                  <span class="admin__rol">{ETIQUETA_ROL[usuario.rol]}</span>
+                </span>
+              </div>
+              <div class="admin__acciones">
+                <BotonTema clase="admin__tema" />
+                {modoPassword && (
+                  <form method="post" action="/admin/salir" class="admin__salir">
+                    <button type="submit">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+                      Salir
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           )
         }
-        <BotonTema clase="admin__tema">Cambiar tema</BotonTema>
         <p class="admin__nota">Cribado comunitario, no diagnóstico. Celdas con n &lt; 5 suprimidas.</p>
       </aside>
       <div class="admin__principal">
@@ -208,17 +218,87 @@ const consulta = Astro.url.search;
     color: var(--color-primario-contraste);
     font-weight: 600;
   }
-  .admin__lateral :global(.admin__tema) {
-    margin-top: var(--espacio-3);
-    align-self: flex-start;
-  }
-  .admin__usuario {
+  .admin__cuenta {
     margin-top: auto;
-    font-size: 0.85rem;
-    word-break: break-all;
+    display: grid;
+    gap: var(--espacio-2);
+    padding: var(--espacio-2);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    background: var(--color-fondo);
+  }
+  .admin__persona {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+  .admin__avatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: var(--color-primario);
+    color: var(--color-primario-contraste);
+    font-weight: 800;
+  }
+  .admin__identidad {
+    display: grid;
+    min-width: 0;
+    line-height: 1.25;
+  }
+  .admin__nombre {
+    font-weight: 700;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .admin__rol {
+    font-size: 0.8rem;
     color: var(--color-texto-suave);
+  }
+  .admin__acciones {
+    display: flex;
+    gap: var(--espacio-1);
+  }
+  .admin__acciones :global(.admin__tema) {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+    padding: 0;
+  }
+  .admin__salir {
+    flex: 1;
+    margin: 0;
+  }
+  .admin__salir button {
+    width: 100%;
+    min-height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: 999px;
+    background: var(--color-superficie);
+    color: var(--color-texto);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .admin__salir button:hover {
+    border-color: var(--color-primario);
+  }
+  .admin__salir button:focus-visible {
+    outline: 3px solid var(--color-foco);
+    outline-offset: 2px;
+  }
+  .admin__salir svg {
+    width: 1.1rem;
+    height: 1.1rem;
   }
   .admin__nota {
     font-size: 0.8rem;
@@ -387,7 +467,7 @@ const consulta = Astro.url.search;
       flex-direction: row;
       flex-wrap: wrap;
     }
-    .admin__usuario {
+    .admin__cuenta {
       margin-top: 0;
     }
     .admin__principal {
