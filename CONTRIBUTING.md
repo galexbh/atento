@@ -17,8 +17,8 @@ Usa siempre `pnpm`, nunca `npm` ni `yarn`.
 
 ```bash
 pnpm install                     # dependencias + hooks de git (lefthook)
-cp .dev.vars.example .dev.vars   # secretos locales
-pnpm db:migrate:local            # esquema en la D1 local
+cp .dev.vars.example .dev.vars   # variables locales de desarrollo
+pnpm db:migrate:local            # crea la base de datos local
 pnpm dev                         # http://localhost:4321
 ```
 
@@ -37,7 +37,7 @@ pnpm dev                         # http://localhost:4321
 | Comando | Qué cubre |
 | --- | --- |
 | `pnpm test` | Unitarias en Node (`tests/unit`): puntuación, agregación, validación. |
-| `pnpm test:workers` | Dentro de workerd con D1 migrada (`tests/workers`): API y crons. |
+| `pnpm test:workers` | Pruebas de la API con base de datos real (`tests/workers`). |
 | `pnpm test:e2e` | Playwright + axe (`tests/e2e`), móvil y escritorio, contra `astro dev`. |
 | `pnpm build` | Compila a `dist/`; genera también el sitemap. |
 

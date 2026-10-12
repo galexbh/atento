@@ -13,7 +13,7 @@ se anotan además en la política de datos abiertos.
 - `/resultado`: «Invitar al docente» comparte `https://atento.galexbh.dev/docente?codigo=XXXXXXXX` (sin ningún dato del resultado). El código se normaliza, es opcional y se guarda en `codigo_vinculo`. No existe ningún endpoint que devuelva respuestas por código.
 - `/cribado/datos` ya no ofrece «Docente» en «¿Quién responde?»; `EsquemaEnvio` rechaza `informante: "docente"` con el instrumento de padres y exige `docente` (sin `respuestasAtento`) con el instrumento docente. `POST /api/respuesta` responde sin `nivel` para el docente.
 - Las respuestas docentes no cuentan en la publicación pública ni en la versión `todas` de `agregados_municipio` (filtro por `version_instrumento`); el panel sí las ve.
-- Panel: reporte «Concordancia padre–docente» (`/admin/concordancia`, `/api/admin/reporte/concordancia`) con kappa de Cohen (nuevo en `estadistica.ts`), Pearson con IC y criterio de dos entornos; desempeño, puntajes y calidad entienden el instrumento docente; microdatos con `T01–T43` y `par_id` (nunca el código); codebook actualizado.
+- Panel: reporte «Concordancia padre–docente» con kappa de Cohen (nuevo en `estadistica.ts`), Pearson con IC y criterio de dos entornos; desempeño, puntajes y calidad entienden el instrumento docente; microdatos con `T01–T43` y `par_id` (nunca el código); codebook actualizado.
 - Lógica de cliente compartida: `motor-cuestionario.ts` y `components/Cuestionario.astro` (familia y docente), claves `atento:docente:*` (incluidas en «Borrar mis datos»), clave de Turnstile en `lib/compartido/turnstile-sitio.ts`.
 - Migración `0005_codigo_vinculo_indice.sql` (índice parcial). Service worker `v2` con el flujo docente. `/docente` en sitemap, pie, portada y `llms.txt`.
 
@@ -40,19 +40,13 @@ se anotan además en la política de datos abiertos.
   complementaria.
 - Enlaces "Datos" en cabecera y pie; la portada enlaza al mapa; `/datos` en el sitemap y `llms.txt`.
 
-### Turnstile (2026-10-12)
-- Widget real integrado en preview y producción; secreto validado y guardado sin exponerlo.
-- El servidor exige `action` y `hostname` además de `success`; tokens de hasta 2048 caracteres.
+### Verificación antibots (2026-10-12)
+- Verificación antibots activa en el envío de cuestionarios, con comprobaciones adicionales en el servidor.
 
-### Seguridad (2026-10-12, revisión interna)
-- Neutralizada la inyección de fórmulas CSV en exportaciones; `versionConsentimiento` con formato de fecha.
-- Microdatos: filtros finos prohibidos, umbral de recodificación sobre el universo, id seudonimizado por descarga, k-anonimato por cruce.
-- Supresión n<5 también en totales; auditoría de consultas; límites de granularidad para el rol investigador.
-- Verificación estricta de origen en POST de `/admin`; `worker-src` y `manifest-src` en la CSP.
-- `RATE_SALT` obligatoria en producción (HMAC de IP); `ADMIN_SESSION_SECRET` obligatorio; cierre global de sesiones.
-- PBKDF2 a 100 000 iteraciones (límite de Cloudflare Workers); Turnstile fail-closed fuera de local.
-- Cabeceras para estáticos, CI con permisos mínimos y auditoría de dependencias, triggers de validación en D1.
-- Botón "Borrar mis datos de este dispositivo" y caducidad del resultado a 30 días.
+### Seguridad y privacidad (2026-10-12)
+- Correcciones derivadas de una revisión de seguridad interna.
+- Anonimización reforzada en las exportaciones para investigación y supresión de grupos pequeños también en totales.
+- Botón "Borrar mis datos de este dispositivo" y caducidad del resultado guardado a 30 días.
 
 ### Pendiente
 
@@ -66,7 +60,7 @@ se anotan además en la política de datos abiertos.
 
 ## [0.1.0] - 2026-10-11
 
-Primera versión funcional, desplegable en Cloudflare Workers.
+Primera versión funcional.
 
 ### Añadido
 
@@ -75,22 +69,19 @@ Primera versión funcional, desplegable en Cloudflare Workers.
 - Flujo de cribado: consentimiento informado (`/cribado/consentimiento`), datos no identificables
   del niño o niña (`/cribado/datos`) y cuestionario (`/cribado/cuestionario`) con la escala NICHQ
   Vanderbilt para padres, 1.ª ed. (2002), más 18 ítems Atento puntuados por separado. Progreso
-  guardado en `localStorage` y envío opcional con Turnstile y honeypot.
+  guardado en `localStorage` y envío opcional con verificación antibots.
 - Página de resultado (`/resultado`) con aviso de salud, nivel orientativo, gráfico por área,
   alertas, código de vínculo para el docente y descarga en PDF. No indexable.
-- API: `POST /api/respuesta` (validación estricta `zod`, límite 5 envíos/hora/IP con hash y sal,
-  puntuación en servidor, fecha sin hora), `GET /api/agregado`, `GET /api/agregado/periodos`,
-  `GET /api/geo` y `GET /api/salud`.
+- API para recibir cuestionarios (validación estricta, puntuación en servidor, sin hora exacta ni
+  identificadores) y para consultar estadísticas agregadas.
 - Agregados por municipio y periodo con supresión `n < 5`, intervalo de Wilson 95 %, cron diario y
   snapshot anual congelado.
-- Panel de administración (`/admin`) con resumen, geografía, demografía, calidad, desempeño,
-  comorbilidad y exportación de agregados.
+- Panel de investigación de acceso restringido con reportes y exportación de agregados.
 - Páginas legales (`/legal/*`): términos, privacidad, aviso de salud, cookies y almacenamiento,
   accesibilidad, datos abiertos, créditos y licencias. Metodología pública (`/metodologia`) y
   contacto.
-- Seguridad: CSP estricta con nonce por petición, HSTS, verificación de `Origin` en la API, modo
-  mantenimiento.
-- SEO y descubribilidad: sitemap (`@astrojs/sitemap`) sin rutas de flujo ni admin, `robots.txt`,
+- Cabeceras de seguridad y protecciones habituales para aplicaciones web.
+- SEO y descubribilidad: sitemap (`@astrojs/sitemap`) sin rutas de flujo ni privadas, `robots.txt`,
   JSON-LD `WebSite`/`Organization`, `BreadcrumbList` (legal y metodología) y `FAQPage` en la
   portada, `llms.txt` y `llms-full.txt`, `humans.txt`, `security.txt` (RFC 9116).
 - PWA ligera: `manifest.webmanifest`, `theme-color` claro/oscuro, service worker con app shell,
