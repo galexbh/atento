@@ -58,6 +58,17 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - if: steps.cache-navegadores.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
+      - name: Variables locales para las pruebas (.dev.vars no está en el repo)
+        run: |
+          HASH=$(pnpm exec tsx scripts/hash-password.ts "atento-admin-local-2026" | grep -E '^pbkdf2\$' | tail -1)
+          {
+            echo "ENTORNO=local"
+            echo "TURNSTILE_SECRET="
+            echo "RATE_SALT=sal-de-pruebas-ci"
+            echo "ADMIN_MODO=password"
+            echo "ADMIN_PASSWORD_HASH=$HASH"
+            echo "ADMIN_SESSION_SECRET=secreto-de-sesion-ci"
+          } > .dev.vars
       - run: pnpm test:e2e
         env:
           CI: "true"
