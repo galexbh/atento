@@ -30,8 +30,8 @@ const {
 const etiquetasX = [...new Set(series.flatMap((s) => s.puntos.map((p) => p.x)))];
 const todos = series.flatMap((s) => s.puntos.map((p) => p.y ?? 0));
 const max = maxProp ?? Math.max(1, ...todos);
-const ancho = 640;
-const alto = 240;
+const ancho = 960;
+const alto = 300;
 const mI = 48;
 const mD = 16;
 const mS = 12;
@@ -45,6 +45,8 @@ const ticks = [0, 0.5, 1].map((t) => t * max);
 const fmt = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unidad}`;
 const colores = ["var(--viz-serie-1)", "var(--viz-serie-2)", "var(--viz-serie-3)"];
 const pasoEtiqueta = Math.max(1, Math.ceil(etiquetasX.length / 8));
+/** Con muchos puntos, las marcas de "n < 5" se dibujan finas para no formar una barra. */
+const denso = etiquetasX.length > 60;
 
 const columnas = [
   { clave: "x", etiqueta: "Periodo" },
@@ -65,7 +67,7 @@ const filas = etiquetasX.map((x) => {
   {etiquetasX.length === 0 ? (
     <p class="panel__nota">Sin datos para los filtros elegidos.</p>
   ) : (
-    <svg class="viz" viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-labelledby={`${id}-t`}>
+    <svg class="viz" viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-labelledby={`${id}-t`} style={`max-width:${ancho}px`}>
       {ticks.map((t) => (
         <g>
           <line class="viz__rejilla" x1={mI} x2={ancho - mD} y1={py(t)} y2={py(t)} />
@@ -96,7 +98,7 @@ const filas = etiquetasX.map((x) => {
                   <title>{s.nombre} · {p.x}: {fmt(p.y)}</title>
                 </circle>
               ) : p?.suprimido ? (
-                <circle cx={px(i)} cy={mS + ah - 4} r="3" fill="var(--viz-trama)">
+                <circle cx={px(i)} cy={mS + ah - 4} r={denso ? 1.6 : 3} fill="var(--viz-trama)" opacity={denso ? 0.6 : 1}>
                   <title>{s.nombre} · {p.x}: n &lt; 5 (suprimido)</title>
                 </circle>
               ) : null,

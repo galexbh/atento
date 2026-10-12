@@ -22,6 +22,8 @@ interface Props {
   /** Nombre de la columna de valor en la tabla de datos. */
   nombreValor?: string;
   id?: string;
+  /** Ancho del lienzo en px; el gráfico nunca se muestra más grande que esto. */
+  ancho?: number;
 }
 const {
   titulo,
@@ -30,6 +32,7 @@ const {
   max: maxProp,
   orientacion = "horizontal",
   nombreValor = "Valor",
+  ancho = 640,
   id = `barras-${Math.random().toString(36).slice(2, 8)}`,
 } = Astro.props;
 
@@ -38,7 +41,6 @@ const max = maxProp ?? Math.max(1, ...valores);
 const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * max);
 const fmt = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unidad}`;
 
-const ancho = 640;
 const margenIzq = orientacion === "horizontal" ? 150 : 40;
 const margenDer = 60;
 const filaAlto = 26;
@@ -47,6 +49,10 @@ const areaAncho = ancho - margenIzq - margenDer;
 const areaAlto = alto - 50;
 const escala = (v: number) => (max === 0 ? 0 : v / max);
 const anchoBarraV = datos.length ? Math.max(4, areaAncho / datos.length - 2) : 0;
+/** Etiquetas del eje X: se muestran cada `pasoX` barras para que no se encimen (~38 px c/u). */
+const pasoX = Math.max(1, Math.ceil(datos.length / Math.max(1, Math.floor(areaAncho / 38))));
+/** Conteos (sin unidad): marcas del eje en enteros, no 198.8 personas. */
+const fmtEje = (v: number) => (unidad === "" ? String(Math.round(v)) : fmt(v));
 const filasTabla = datos.map((d) => ({
   etiqueta: d.etiqueta,
   valor: d.suprimido ? "n < 5" : d.valor === null ? "—" : (d.detalle ?? fmt(d.valor)),
@@ -58,7 +64,7 @@ const filasTabla = datos.map((d) => ({
   {datos.length === 0 ? (
     <p class="panel__nota">Sin datos para los filtros elegidos.</p>
   ) : (
-    <svg class="viz" viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-labelledby={`${id}-t`} aria-describedby={`${id}-d`}>
+    <svg class="viz" viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-labelledby={`${id}-t`} aria-describedby={`${id}-d`} style={`max-width:${ancho}px`}>
       <desc id={`${id}-d`}>{datos.map((d) => `${d.etiqueta}: ${d.suprimido ? "n menor que 5" : d.valor === null ? "sin dato" : fmt(d.valor)}`).join("; ")}</desc>
       <defs>
         <pattern id={`${id}-trama`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -70,7 +76,7 @@ const filasTabla = datos.map((d) => ({
           {ticks.map((t) => (
             <g>
               <line class="viz__rejilla" x1={margenIzq + escala(t) * areaAncho} x2={margenIzq + escala(t) * areaAncho} y1={10} y2={alto - 30} />
-              <text class="viz__eje-etq" x={margenIzq + escala(t) * areaAncho} y={alto - 14} text-anchor="middle">{fmt(t)}</text>
+              <text class="viz__eje-etq" x={margenIzq + escala(t) * areaAncho} y={alto - 14} text-anchor="middle">{fmtEje(t)}</text>
             </g>
           ))}
           <line class="viz__eje" x1={margenIzq} x2={margenIzq} y1={10} y2={alto - 30} />
@@ -96,7 +102,7 @@ const filasTabla = datos.map((d) => ({
           {ticks.map((t) => (
             <g>
               <line class="viz__rejilla" x1={margenIzq} x2={ancho - margenDer} y1={10 + areaAlto - escala(t) * areaAlto} y2={10 + areaAlto - escala(t) * areaAlto} />
-              <text class="viz__eje-etq" x={margenIzq - 6} y={14 + areaAlto - escala(t) * areaAlto} text-anchor="end">{fmt(t)}</text>
+              <text class="viz__eje-etq" x={margenIzq - 6} y={14 + areaAlto - escala(t) * areaAlto} text-anchor="end">{fmtEje(t)}</text>
             </g>
           ))}
           <line class="viz__eje" x1={margenIzq} x2={ancho - margenDer} y1={10 + areaAlto} y2={10 + areaAlto} />
@@ -111,7 +117,7 @@ const filasTabla = datos.map((d) => ({
                 ) : (
                   <rect x={x} y={10 + areaAlto - h} width={anchoBarraV} height={h} fill="var(--viz-serie-1)" rx="3" />
                 )}
-                {datos.length <= 16 && (
+                {i % pasoX === 0 && (
                   <text class="viz__eje-etq" x={x + anchoBarraV / 2} y={alto - 16} text-anchor="middle">{d.etiqueta}</text>
                 )}
               </g>

@@ -56,6 +56,7 @@ const filasDesc = d.escalas.map((e) => {
     {d.escalas.map((e) => (
       <div class="panel">
         <Barras
+          ancho={360}
           orientacion="vertical"
           titulo={`Histograma · ${ETIQUETA_ESCALA[e.escala]}`}
           datos={e.histograma.map((b) => ({ etiqueta: `${b.desde}–${b.hasta}`, valor: b.celda.suprimido ? null : b.celda.n, suprimido: b.celda.suprimido }))}

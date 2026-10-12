@@ -15,6 +15,11 @@ const filtros = parsearFiltros(Astro.url.searchParams);
 const g = Astro.url.searchParams.get("granularidad");
 const granularidad: Granularidad = g === "semana" || g === "mes" ? g : "dia";
 const datos = await reporteVolumen(env.DB, filtros, granularidad);
+const NOMBRE_GRANULARIDAD: Record<Granularidad, string> = {
+  dia: "día",
+  semana: "semana",
+  mes: "mes",
+};
 const enlace = (gr: Granularidad) => {
   const p = new URLSearchParams(Astro.url.searchParams);
   p.set("granularidad", gr);
@@ -31,13 +36,16 @@ const enlace = (gr: Granularidad) => {
   </section>
   <section class="panel">
     <p class="panel__nota">
-      Granularidad:
-      {(["dia", "semana", "mes"] as Granularidad[]).map((gr) => (
-        <a href={enlace(gr)} aria-current={gr === granularidad ? "true" : undefined} style={gr === granularidad ? "font-weight:700" : ""}> {gr} </a>
+      Ver por:{" "}
+      {(["dia", "semana", "mes"] as Granularidad[]).map((gr, i) => (
+        <>
+          {i > 0 && " · "}
+          <a href={enlace(gr)} aria-current={gr === granularidad ? "true" : undefined} style={gr === granularidad ? "font-weight:700" : ""}>{NOMBRE_GRANULARIDAD[gr]}</a>
+        </>
       ))}
     </p>
     <Lineas
-      titulo={`Completadas y abandonadas por ${granularidad}`}
+      titulo={`Completadas y abandonadas por ${NOMBRE_GRANULARIDAD[granularidad]}`}
       series={[
         { nombre: "Completadas", puntos: datos.series.map((s) => ({ x: s.clave, y: s.completadas.suprimido ? null : s.completadas.n, suprimido: s.completadas.suprimido })) },
         { nombre: "Abandonadas", puntos: datos.series.map((s) => ({ x: s.clave, y: s.abandonadas.suprimido ? null : s.abandonadas.n, suprimido: s.abandonadas.suprimido })) },
