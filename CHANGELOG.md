@@ -7,6 +7,16 @@ se anotan además en la política de datos abiertos.
 
 ## [Unreleased]
 
+### Versión para docentes (2026-10-12)
+- Nuevo instrumento `vanderbilt-docente-es-1.0`: NICHQ Vanderbilt Assessment Scale – Teacher Informant, 1.ª edición (2002), versión en español (© 2005, OHSU como fuente), 43 ítems `T01–T43` verificados contra la fuente; reglas de NICHQ (inatención e hiperactividad ≥ 6 de 9, oposición/conducta combinada ≥ 3 de 10 guardada en `conducta`, ansiedad/depresión ≥ 3 de 7, desempeño ≥ 1 ítem con 4–5). Detalle y dudas para el asesor en `docs/02-instrumento/version-docente.md`.
+- Flujo `/docente` (presentación indexable) → consentimiento docente (versión `2026-10-12`) → datos de la escuela → cuestionario (7 páginas) → hoja imprimible con el resumen de SUS respuestas, sin nivel ni interpretación. Sin la casilla de investigación no se envía nada.
+- `/resultado`: «Invitar al docente» comparte `https://atento.galexbh.dev/docente?codigo=XXXXXXXX` (sin ningún dato del resultado). El código se normaliza, es opcional y se guarda en `codigo_vinculo`. No existe ningún endpoint que devuelva respuestas por código.
+- `/cribado/datos` ya no ofrece «Docente» en «¿Quién responde?»; `EsquemaEnvio` rechaza `informante: "docente"` con el instrumento de padres y exige `docente` (sin `respuestasAtento`) con el instrumento docente. `POST /api/respuesta` responde sin `nivel` para el docente.
+- Las respuestas docentes no cuentan en la publicación pública ni en la versión `todas` de `agregados_municipio` (filtro por `version_instrumento`); el panel sí las ve.
+- Panel: reporte «Concordancia padre–docente» (`/admin/concordancia`, `/api/admin/reporte/concordancia`) con kappa de Cohen (nuevo en `estadistica.ts`), Pearson con IC y criterio de dos entornos; desempeño, puntajes y calidad entienden el instrumento docente; microdatos con `T01–T43` y `par_id` (nunca el código); codebook actualizado.
+- Lógica de cliente compartida: `motor-cuestionario.ts` y `components/Cuestionario.astro` (familia y docente), claves `atento:docente:*` (incluidas en «Borrar mis datos»), clave de Turnstile en `lib/compartido/turnstile-sitio.ts`.
+- Migración `0005_codigo_vinculo_indice.sql` (índice parcial). Service worker `v2` con el flujo docente. `/docente` en sitemap, pie, portada y `llms.txt`.
+
 ### Mapa público /datos (2026-10-12)
 - Página `/datos` y `/datos/<año>` con mapa por departamento (% con indicadores, n de respuestas y comparación entre años), tablas, serie trimestral nacional y descargas CSV/JSON (CC BY 4.0).
 - Publicación segura: solo años completos, supresión primaria n<5 y complementaria en tres niveles; versión v1 inmutable al cerrar el año.
@@ -51,6 +61,8 @@ se anotan además en la política de datos abiertos.
 - Confirmación de la línea de emergencia y recursos de salud mental en Honduras.
 - Icono `maskable` a sangre completa para el manifest (el actual tiene esquinas transparentes).
 - Validación en Honduras de la traducción de la escala y de los ítems Atento (socio académico).
+- Revisión clínica de la versión docente (regla de desempeño de la 1.ª frente a la 2.ª edición, escala combinada de oposición/conducta) y revisión legal del consentimiento docente.
+- El consentimiento de la familia ya no menciona a docentes: tienen su propio formulario y consentimiento.
 
 ## [0.1.0] - 2026-10-11
 

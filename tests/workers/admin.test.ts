@@ -14,6 +14,9 @@ import {
   verificarSesion,
 } from "@/lib/admin/password";
 import { generarFilas, SQL_INSERT, valoresInsert } from "@/lib/admin/sintetico";
+import { construirFila, parametrosRespuesta, SQL_INSERTAR_RESPUESTA } from "@/lib/db/respuestas";
+import { obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
+import type { Envio } from "@/lib/validacion/respuesta";
 import { CONTRASENA_PRUEBA } from "./admin-constantes";
 
 const BASE = "https://atento.galexbh.dev";
@@ -374,6 +377,7 @@ describe("reportes y exportaciones con datos sintéticos", () => {
       "calidad",
       "investigacion",
       "historico",
+      "concordancia",
     ]) {
       const r = await get(`/api/admin/reporte/${nombre}?periodo=acumulado`, cookie);
       expect(r.status, nombre).toBe(200);
@@ -580,5 +584,208 @@ describe("sistema", () => {
     const cuerpo = await recalcular.json<{ mensaje: string }>();
     expect(["recalculo-pendiente", "recalculo-ok", "recalculo-error"]).toContain(cuerpo.mensaje);
     expect((await enviar("otra")).status).toBe(400);
+  });
+});
+
+/** Respuestas de un instrumento con frecuencia y desempeño fijos. */
+function respuestasDe(instrumentoId: string, frecuencia: number, desempeno = 3) {
+  const r: Record<string, number> = {};
+  for (const item of obtenerInstrumento(instrumentoId).items) {
+    r[item.id] = item.tipo === "desempeno" ? desempeno : frecuencia;
+  }
+  return r;
+}
+
+/** Inserta una respuesta real (puntuada por construirFila) de familia o docente. */
+async function insertarEnvio(opciones: {
+  docente: boolean;
+  codigo: string | null;
+  frecuencia: number;
+  desempeno?: number;
+  fecha?: string;
+  consentimiento?: boolean;
+}) {
+  const instrumentoId = opciones.docente ? "vanderbilt-docente-es-1.0" : "vanderbilt-padres-es-1.0";
+  const envio: Envio = {
+    id: crypto.randomUUID(),
+    instrumentoId,
+    respuestas: respuestasDe(instrumentoId, opciones.frecuencia, opciones.desempeno ?? 3),
+    departamento: "08",
+    municipio: "0801",
+    edadAnios: 8,
+    sexo: "F",
+    informante: opciones.docente ? "docente" : "madre",
+    consentimientoInvestigacion: opciones.consentimiento ?? true,
+    versionConsentimiento: opciones.docente ? "2026-10-12" : "2026-10-11",
+    duracionSegundos: 400,
+    completado: true,
+    turnstileToken: "t",
+    hp: "",
+  };
+  if (opciones.codigo) envio.codigoVinculo = opciones.codigo;
+  const fila = construirFila(envio, new Date(`${opciones.fecha ?? "2026-05-10"}T12:00:00Z`));
+  await env.DB.prepare(SQL_INSERTAR_RESPUESTA)
+    .bind(...parametrosRespuesta(fila))
+    .run();
+  return fila;
+}
+
+describe("versión docente en el panel", () => {
+  type Concordancia = {
+    datos: {
+      pares: { n: number; suprimido: boolean };
+      docentesSinCodigo: { n: number; suprimido: boolean };
+      codigosRepetidos: { n: number; suprimido: boolean };
+      dosEntornos: { pct: number | null; suprimido: boolean };
+      acuerdo: Array<{
+        escala: string;
+        acuerdo: { pct: number | null };
+        kappa: { valor: number } | null;
+        tabla: Record<string, { n: number; suprimido: boolean }>;
+      }>;
+      correlacion: Array<{ escala: string; r: number | null }>;
+    };
+  };
+
+  it("concordancia: con 4 pares suprime todo; con 8 pares calcula acuerdo, kappa y dos entornos", async () => {
+    const cookie = await cookieAdmin();
+    // 4 pares: menos de 5 -> todo suprimido.
+    for (let i = 0; i < 4; i++) {
+      const codigo = `PAR0000${i}`;
+      await insertarEnvio({ docente: false, codigo, frecuencia: 3 });
+      await insertarEnvio({ docente: true, codigo, frecuencia: 3 });
+    }
+    const r1 = await get("/api/admin/reporte/concordancia?periodo=2026", cookie);
+    expect(r1.status).toBe(200);
+    const c1 = (await r1.json<Concordancia>()).datos;
+    expect(c1.pares).toEqual({ n: 0, suprimido: true });
+    expect(c1.dosEntornos.suprimido).toBe(true);
+    expect(c1.acuerdo.every((a) => a.kappa === null && a.acuerdo.pct === null)).toBe(true);
+
+    // 4 pares más (3 negativos en ambos, 1 positivo solo en la familia) = 8 pares.
+    for (let i = 4; i < 7; i++) {
+      const codigo = `PAR0000${i}`;
+      await insertarEnvio({ docente: false, codigo, frecuencia: 0 });
+      await insertarEnvio({ docente: true, codigo, frecuencia: 0 });
+    }
+    await insertarEnvio({ docente: false, codigo: "PAR00007", frecuencia: 3 });
+    await insertarEnvio({ docente: true, codigo: "PAR00007", frecuencia: 0 });
+    // Fila repetida de la familia, más antigua: se usa la más reciente (la de arriba).
+    await insertarEnvio({ docente: false, codigo: "PAR00007", frecuencia: 0, fecha: "2026-02-01" });
+    // Docentes sin código y familia sin pareja: no forman par.
+    for (let i = 0; i < 5; i++) await insertarEnvio({ docente: true, codigo: null, frecuencia: 1 });
+    await insertarEnvio({ docente: false, codigo: "SOLOFAM1", frecuencia: 2 });
+
+    const r2 = await get("/api/admin/reporte/concordancia?periodo=2026", cookie);
+    const c2 = (await r2.json<Concordancia>()).datos;
+    expect(c2.pares).toEqual({ n: 8, suprimido: false });
+    expect(c2.docentesSinCodigo).toEqual({ n: 5, suprimido: false });
+    const inat = c2.acuerdo.find((a) => a.escala === "inatencion");
+    // Tabla: ambos 4, solo familia 1, solo docente 0, ninguno 3 (celdas < 5 suprimidas).
+    expect(inat?.tabla.ambos).toEqual({ n: 0, suprimido: true });
+    expect(inat?.acuerdo.pct).toBe(87.5);
+    // κ = (7/8 − 0,5) / (1 − 0,5) con pA = 5/8 y pB = 4/8 → pe = 0,5 → κ = 0,75.
+    expect(inat?.kappa?.valor).toBeCloseTo(0.75, 3);
+    expect(c2.dosEntornos.pct).toBe(50);
+    expect(c2.correlacion.find((x) => x.escala === "inatencion")?.r).not.toBeNull();
+    // Los filtros de periodo aplican: en 2025 no hay pares.
+    const r3 = await get("/api/admin/reporte/concordancia?periodo=2025", cookie);
+    expect((await r3.json<Concordancia>()).datos.pares).toEqual({ n: 0, suprimido: true });
+    // Cada consulta queda en auditoría.
+    const auditoria = await env.DB.prepare(
+      "SELECT filtros FROM auditoria_admin WHERE accion = 'consulta' ORDER BY id",
+    ).all<{ filtros: string }>();
+    const reportes = auditoria.results.map((a) => JSON.parse(a.filtros).reporte);
+    expect(reportes.filter((x) => x === "concordancia")).toHaveLength(3);
+  });
+
+  it("los reportes filtran por el instrumento docente (versionInstrumento)", async () => {
+    const cookie = await cookieAdmin();
+    for (let i = 0; i < 6; i++)
+      await insertarEnvio({ docente: true, codigo: null, frecuencia: 2, desempeno: 4 });
+    for (let i = 0; i < 7; i++)
+      await insertarEnvio({ docente: false, codigo: null, frecuencia: 0 });
+    const q = "periodo=2026&versionInstrumento=vanderbilt-docente-es-1.0";
+    const resumen = await get(`/api/admin/reporte/resumen?${q}`, cookie);
+    const { datos: rd } = await resumen.json<{ datos: { nPeriodo: { n: number } } }>();
+    expect(rd.nPeriodo.n).toBe(6);
+    const des = await get(`/api/admin/reporte/desempeno?${q}`, cookie);
+    const { datos: dd } = await des.json<{
+      datos: { items: Array<{ id: string; n: number; conProblemas: { pct: number | null } }> };
+    }>();
+    expect(dd.items.map((x) => x.id)).toEqual([
+      "T36",
+      "T37",
+      "T38",
+      "T39",
+      "T40",
+      "T41",
+      "T42",
+      "T43",
+    ]);
+    expect(dd.items[0]?.n).toBe(6);
+    expect(dd.items[0]?.conProblemas.pct).toBe(100);
+    const punt = await get(`/api/admin/reporte/puntajes?${q}`, cookie);
+    const { datos: pd } = await punt.json<{
+      datos: {
+        escalas: Array<{
+          escala: string;
+          n: number;
+          histograma: Array<{ desde: number; hasta: number }>;
+        }>;
+      };
+    }>();
+    const desempeno = pd.escalas.find((e) => e.escala === "desempeno");
+    expect(desempeno?.n).toBe(6);
+    expect(desempeno?.histograma[0]?.desde).toBe(8);
+    expect(desempeno?.histograma.at(-1)?.hasta).toBe(40);
+  });
+
+  it("microdatos: columnas T01–T43 y par_id (HMAC por descarga); nunca codigo_vinculo", async () => {
+    const cookie = await cookieAdmin();
+    for (let i = 0; i < 5; i++) {
+      await insertarEnvio({ docente: false, codigo: `MICRO00${i}`, frecuencia: 1 });
+      await insertarEnvio({ docente: true, codigo: `MICRO00${i}`, frecuencia: 1 });
+    }
+    await insertarEnvio({ docente: false, codigo: null, frecuencia: 1 });
+    const csv = await get("/api/admin/exportar?tipo=microdatos&formato=csv&periodo=2026", cookie);
+    expect(csv.status).toBe(200);
+    const texto = await csv.text();
+    const cabecera = (texto.replace(/^\uFEFF/, "").split("\r\n")[0] as string).split(",");
+    expect(cabecera).toContain("par_id");
+    expect(cabecera).toContain("T01");
+    expect(cabecera).toContain("T43");
+    expect(cabecera).not.toContain("codigo_vinculo");
+    expect(texto).not.toContain("MICRO00");
+
+    const json = await get("/api/admin/exportar?tipo=microdatos&formato=json&periodo=2026", cookie);
+    const { datos } = await json.json<{ datos: Array<Record<string, unknown>> }>();
+    expect(datos).toHaveLength(11);
+    for (const d of datos) expect(d).not.toHaveProperty("codigo_vinculo");
+    const conPar = datos.filter((d) => d.par_id !== null);
+    expect(conPar).toHaveLength(10);
+    for (const d of conPar) expect(String(d.par_id)).toMatch(/^[0-9a-f]{16}$/);
+    // Cada par_id agrupa exactamente una fila de familia y una de docente.
+    const grupos = new Map<string, string[]>();
+    for (const d of conPar) {
+      const lista = grupos.get(String(d.par_id)) ?? [];
+      lista.push(String(d.version_instrumento));
+      grupos.set(String(d.par_id), lista);
+    }
+    expect(grupos.size).toBe(5);
+    for (const lista of grupos.values()) {
+      expect(lista.sort()).toEqual(["vanderbilt-docente-es-1.0", "vanderbilt-padres-es-1.0"]);
+    }
+    const docente = datos.find((d) => d.version_instrumento === "vanderbilt-docente-es-1.0");
+    expect(docente?.T01).toBe(1);
+    expect(docente?.V01).toBeNull();
+    expect(datos.find((d) => d.par_id === null)?.version_instrumento).toBe(
+      "vanderbilt-padres-es-1.0",
+    );
+    // El codebook documenta par_id y la versión docente.
+    const codebook = await (await get("/api/admin/exportar?tipo=codebook", cookie)).text();
+    expect(codebook).toContain("par_id");
+    expect(codebook).toContain("vanderbilt-docente-es-1.0");
+    expect(codebook).toContain("| T43 |");
   });
 });

@@ -31,7 +31,14 @@ export default defineConfig({
       ].map((slug) => `https://atento.galexbh.dev/legal/${slug}`),
       // /datos (src/pages/datos/index.astro) entra sola por ser ruta estática; añadirla aquí la
       // duplicaría. Los informes /datos/AAAA (dinámicos) se enlazan desde /datos.
-      filter: (url) => !/\/(resultado|cribado|admin|api|offline)(\/|$)/.test(new URL(url).pathname),
+      // /docente (presentación de la versión docente) también entra sola; su flujo
+      // (/docente/consentimiento, /datos, /cuestionario, /gracias) se excluye.
+      filter: (url) => {
+        const ruta = new URL(url).pathname;
+        return (
+          !/\/(resultado|cribado|admin|api|offline)(\/|$)/.test(ruta) && !/^\/docente\/./.test(ruta)
+        );
+      },
       // Mismo formato que <link rel="canonical"> (sin barra final).
       serialize: (item) => ({
         ...item,

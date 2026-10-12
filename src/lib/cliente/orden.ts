@@ -61,3 +61,36 @@ export function ordenarItems(instrumentoPrincipal: string): ItemOrdenado[] {
 export function totalPaginas(items: ItemOrdenado[]): number {
   return Math.ceil(items.length / ITEMS_POR_PAGINA);
 }
+
+/**
+ * Orden del cuestionario docente (Vanderbilt docente, 43 ítems, sin ítems Atento intercalados):
+ * los 35 ítems de frecuencia en su orden original, en páginas de 6 (6 páginas), y los 8 ítems de
+ * desempeño (escala 1–5, una o dos palabras cada uno) juntos en una última página, para no mezclar
+ * escalas de respuesta en la misma pantalla. Total: 7 páginas.
+ */
+export function ordenarItemsDocente(instrumentoId: string): ItemOrdenado[] {
+  const instrumento = obtenerInstrumento(instrumentoId);
+  const frecuencia = instrumento.items.filter((i) => i.tipo === "frecuencia");
+  const desempeno = instrumento.items.filter((i) => i.tipo === "desempeno");
+  const paginasFrecuencia = Math.ceil(frecuencia.length / ITEMS_POR_PAGINA);
+  const salida: ItemOrdenado[] = frecuencia.map((item, i) => ({
+    item,
+    instrumentoId: instrumento.id,
+    posicion: i + 1,
+    pagina: Math.floor(i / ITEMS_POR_PAGINA),
+  }));
+  desempeno.forEach((item, i) => {
+    salida.push({
+      item,
+      instrumentoId: instrumento.id,
+      posicion: frecuencia.length + i + 1,
+      pagina: paginasFrecuencia,
+    });
+  });
+  return salida;
+}
+
+/** Número de páginas de una lista ya ordenada (la última página puede tener más de 6 ítems). */
+export function paginasDe(items: ItemOrdenado[]): number {
+  return items.reduce((max, o) => Math.max(max, o.pagina + 1), 0);
+}

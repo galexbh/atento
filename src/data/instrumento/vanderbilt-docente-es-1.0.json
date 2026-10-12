@@ -1,0 +1,422 @@
+{
+  "id": "vanderbilt-docente-es-1.0",
+  "nombre": "Escala de evaluación Vanderbilt de NICHQ: informante docente (español)",
+  "version": "1.0",
+  "fecha": "2026-10-12",
+  "informante": "docente",
+  "creditos": "NICHQ Vanderbilt Assessment Scale—Teacher Informant, 1ª edición (© 2002 American Academy of Pediatrics y National Initiative for Children's Healthcare Quality, NICHQ). Versión en español «Sistema NICHQ Vanderbilt de Evaluación. Cuestionario del MAESTRO» (© 2005 American Academy of Pediatrics, University of North Carolina at Chapel Hill / North Carolina Center for Children's Healthcare Improvement y NICHQ). Adaptación de las Vanderbilt Rating Scales de Mark L. Wolraich, MD. Reproducido con crédito a NICHQ como fuente original.",
+  "fuenteUrl": "https://www.ohsu.edu/sites/default/files/2021-02/Pediatric-Autism-Intake-Packet-Spanish.pdf",
+  "traduccionProvisional": false,
+  "notas": [
+    "Texto tomado de la versión bilingüe español/inglés «Sistema NICHQ Vanderbilt de Evaluación. Cuestionario del MAESTRO / NICHQ Vanderbilt Assessment Scale—TEACHER Informant» (hojas D4s1–D4s4, «Revisión - 0303»), páginas 8–10 del paquete de admisión en español de OHSU (Oregon Health & Science University). La misma traducción aparece, idéntica, en el paquete en español de Erie Family Health. Corresponde a la 1ª edición (2002) del informante docente; la traducción al español tiene © 2005.",
+    "Estructura verificada contra la fuente en español y contra la versión oficial en inglés de NICHQ (https://nichq.org/wp-content/uploads/2024/09/NICHQ-Vanderbilt-Assessment-Scales.pdf, hojas D4 y guía de puntuación): 43 ítems; 1–9 inatención, 10–18 hiperactividad/impulsividad, 19–28 oposición desafiante/conducta (una sola escala combinada), 29–35 ansiedad/depresión (todos 0–3) y 36–43 desempeño (36–38 rendimiento académico, 39–43 conducta escolar; 1–5).",
+    "Mapeo de escalas en Atento: la escala combinada de oposición desafiante/conducta (ítems 19–28) se guarda en la escala interna `conducta` (umbral ≥ 3 de 10, regla de la fuente). La escala `oposicion` no tiene ítems en este instrumento y por eso nunca es positiva (pos_oposicion = 0, punt_oposicion = 0).",
+    "Etiquetas de frecuencia según la fuente: Nunca / A veces / Seguido / Muy seguido. Etiquetas de desempeño: Excelente / Sobre lo normal / Normal / Cierta dificultad / Con dificultad.",
+    "Ajustes editoriales: ítem 32 «Se desprecia a si mismo se siente inferior» → «Se desprecia a sí mismo o se siente inferior» (tilde y conjunción «o» restituidas según el original inglés «Feels worthless or inferior»); comillas tipográficas del ítem 14 conservadas. El ítem 41 se llama «Conducta en clase» en la fuente española (en inglés «Disrupting class»): se conserva la redacción española.",
+    "No se incluyen: nombre del docente, del alumno, materia, hora de clase, grado, semanas o meses de observación, la pregunta sobre medicación ni los comentarios del formulario original (minimización de datos)."
+  ],
+  "opcionesFrecuencia": [
+    {
+      "valor": 0,
+      "etiqueta": "Nunca"
+    },
+    {
+      "valor": 1,
+      "etiqueta": "A veces"
+    },
+    {
+      "valor": 2,
+      "etiqueta": "Seguido"
+    },
+    {
+      "valor": 3,
+      "etiqueta": "Muy seguido"
+    }
+  ],
+  "opcionesDesempeno": [
+    {
+      "valor": 1,
+      "etiqueta": "Excelente"
+    },
+    {
+      "valor": 2,
+      "etiqueta": "Sobre lo normal"
+    },
+    {
+      "valor": 3,
+      "etiqueta": "Normal"
+    },
+    {
+      "valor": 4,
+      "etiqueta": "Cierta dificultad"
+    },
+    {
+      "valor": 5,
+      "etiqueta": "Con dificultad"
+    }
+  ],
+  "items": [
+    {
+      "id": "T01",
+      "orden": 1,
+      "texto": "No pone atención a los detalles o comete errores en sus actividades escolares por descuido",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1a",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T02",
+      "orden": 2,
+      "texto": "Se le dificulta mantenerse atento al llevar a cabo sus tareas o actividades",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1b",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T03",
+      "orden": 3,
+      "texto": "Parece no estar escuchando cuando se le habla directamente",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1c",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T04",
+      "orden": 4,
+      "texto": "No sigue las instrucciones hasta el final y no concluye sus actividades escolares (no porque se rehúse a seguirlas o porque no las comprenda)",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1d",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T05",
+      "orden": 5,
+      "texto": "Tiene dificultad al organizar sus tareas y actividades",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1e",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T06",
+      "orden": 6,
+      "texto": "Evita, le disgusta o se niega a comenzar actividades que requieren un continuo esfuerzo mental",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1f",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T07",
+      "orden": 7,
+      "texto": "Pierde cosas que son indispensables para cumplir con sus tareas o actividades (tareas de la escuela, lápices o libros)",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1g",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T08",
+      "orden": 8,
+      "texto": "Se distrae fácilmente con estímulos externos",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1h",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T09",
+      "orden": 9,
+      "texto": "Es olvidadizo(a) en sus actividades cotidianas",
+      "escala": "inatencion",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A1i",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T10",
+      "orden": 10,
+      "texto": "Mueve constantemente las manos o los pies, o no se está quieto(a) en su asiento",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2a",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T11",
+      "orden": 11,
+      "texto": "Se pone de pie en el aula cuando debiera permanecer sentado",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2b",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T12",
+      "orden": 12,
+      "texto": "Corre o camina por todos lados cuando debiera permanecer sentado",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2c",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T13",
+      "orden": 13,
+      "texto": "Se le dificulta jugar o empezar actividades recreativas más tranquilas",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2d",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T14",
+      "orden": 14,
+      "texto": "Está en constante movimiento o actúa como si “tuviera un motor por dentro”",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2e",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T15",
+      "orden": 15,
+      "texto": "Habla excesivamente",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2f",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T16",
+      "orden": 16,
+      "texto": "Responde precipitadamente, incluso antes de escuchar la pregunta completa",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2g",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T17",
+      "orden": 17,
+      "texto": "Tiene dificultad haciendo fila o cola",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2h",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T18",
+      "orden": 18,
+      "texto": "Se entromete o interrumpe a otros (en conversaciones o juegos)",
+      "escala": "hiperactividad",
+      "fuente": "vanderbilt",
+      "criterioDSM": "A2i",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T19",
+      "orden": 19,
+      "texto": "Pierde el control de sus emociones",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T20",
+      "orden": 20,
+      "texto": "Desafía abiertamente o se niega a cumplir las órdenes o las reglas de los adultos",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T21",
+      "orden": 21,
+      "texto": "Se le ve enojado(a) o resentido(a)",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T22",
+      "orden": 22,
+      "texto": "Es rencoroso(a) y vengativo(a)",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T23",
+      "orden": 23,
+      "texto": "Reta, amenaza o intimida a otros",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T24",
+      "orden": 24,
+      "texto": "Comienza peleas de contacto físico",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T25",
+      "orden": 25,
+      "texto": "Miente para conseguir bienes o favores o para eludir sus obligaciones",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T26",
+      "orden": 26,
+      "texto": "Es físicamente cruel con los demás",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T27",
+      "orden": 27,
+      "texto": "Ha robado objetos de cierto valor",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T28",
+      "orden": 28,
+      "texto": "Destruye deliberadamente la propiedad ajena",
+      "escala": "conducta",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T29",
+      "orden": 29,
+      "texto": "Siente miedo, ansiedad o está preocupado(a)",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T30",
+      "orden": 30,
+      "texto": "Está pendiente de sus actos o se avergüenza fácilmente",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T31",
+      "orden": 31,
+      "texto": "Teme hacer nuevas cosas por temor a cometer errores",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T32",
+      "orden": 32,
+      "texto": "Se desprecia a sí mismo o se siente inferior",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T33",
+      "orden": 33,
+      "texto": "Siente que los problemas son responsabilidad suya y se siente culpable",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T34",
+      "orden": 34,
+      "texto": "Se siente solo(a), rechazado(a) o sin amor; se queja de que nadie lo quiere",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T35",
+      "orden": 35,
+      "texto": "Se le ve triste, infeliz o deprimido(a)",
+      "escala": "ansiedad_depresion",
+      "fuente": "vanderbilt",
+      "tipo": "frecuencia"
+    },
+    {
+      "id": "T36",
+      "orden": 36,
+      "texto": "Lectura",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T37",
+      "orden": 37,
+      "texto": "Matemáticas",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T38",
+      "orden": 38,
+      "texto": "Expresión escrita",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T39",
+      "orden": 39,
+      "texto": "Relación con sus compañeros",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T40",
+      "orden": 40,
+      "texto": "Sigue instrucciones",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T41",
+      "orden": 41,
+      "texto": "Conducta en clase",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T42",
+      "orden": 42,
+      "texto": "Concluye las tareas asignadas",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    },
+    {
+      "id": "T43",
+      "orden": 43,
+      "texto": "Habilidad para organizarse",
+      "escala": "desempeno",
+      "fuente": "vanderbilt",
+      "tipo": "desempeno"
+    }
+  ]
+}

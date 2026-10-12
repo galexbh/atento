@@ -27,7 +27,17 @@ const INFORMANTE: Record<ResultadoGuardado["informante"], string> = {
   docente: "Docente",
 };
 
+/** Respaldo si la página no trae `data-sitio` (origen de `Astro.site`). */
 const SITIO = "https://atento.galexbh.dev";
+
+/**
+ * Mensaje para invitar al docente: enlace a la versión docente con el código de vínculo. No
+ * incluye ningún dato del resultado (nivel, escalas ni alertas).
+ */
+export function mensajeInvitacionDocente(sitio: string, codigo: string): string {
+  const enlace = `${sitio.replace(/\/$/, "")}/docente?codigo=${encodeURIComponent(codigo)}`;
+  return `Hola. Respondí el cuestionario gratuito de Atento sobre atención y conducta en niños. ¿Podría responder usted la versión para docentes? Toma de 5 a 8 minutos y es anónima: ${enlace} — Código de vínculo: ${formatearCodigo(codigo)}. ¡Gracias!`;
+}
 
 function escapar(texto: string): string {
   return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -158,7 +168,7 @@ export function iniciarResultado(raiz: HTMLElement): void {
   const invitar = $<HTMLButtonElement>("invitar");
   const panel = $<HTMLElement>("panel-docente");
   const codigo = formatearCodigo(r.codigoVinculo);
-  const mensaje = `Hola. Hice el cuestionario gratuito de Atento sobre señales de atención y conducta en niños. ¿Podría responderlo usted también, como docente? Toma unos 10 minutos y es anónimo: ${SITIO}/cribado/consentimiento — Mi código de vínculo es ${codigo}. ¡Gracias!`;
+  const mensaje = mensajeInvitacionDocente(raiz.dataset.sitio || SITIO, r.codigoVinculo);
   $<HTMLTextAreaElement>("mensaje-docente").value = mensaje;
   $("codigo-docente").textContent = codigo;
   $("codigo-grande").textContent = codigo;

@@ -1,6 +1,6 @@
 /** Reporte 4: puntajes. Histograma, descriptivos y percentiles por subescala; % por nivel. */
 import type { Escala } from "../puntuacion/tipos";
-import { consultar, type Db, ESCALAS_TODAS, RANGO_PUNTAJE, where } from "./comun";
+import { consultar, type Db, ESCALAS_TODAS, rangosPuntaje, where } from "./comun";
 import { type Bin, type Descriptivos, descriptivos, histograma, redondear } from "./estadistica";
 import type { Filtros } from "./filtros";
 import { type Celda, conteo, estaSuprimido, type Proporcion, proporcion } from "./supresion";
@@ -33,11 +33,12 @@ export async function reportePuntajes(db: Db, filtros: Filtros): Promise<Reporte
       w.params,
     ),
   ]);
+  const rangos = rangosPuntaje(filtros.versionInstrumento);
   const escalas = ESCALAS_TODAS.map((escala): PuntajeEscala => {
     const valores = filas
       .map((f) => f[`punt_${escala}`])
       .filter((v): v is number => typeof v === "number");
-    const rango = RANGO_PUNTAJE[escala];
+    const rango = rangos[escala];
     const suprimido = estaSuprimido(valores.length);
     const d = suprimido ? null : descriptivos(valores);
     const desc = d
@@ -51,8 +52,7 @@ export async function reportePuntajes(db: Db, filtros: Filtros): Promise<Reporte
           p90: redondear(d.p90, 1),
         }
       : null;
-    const min = escala === "desempeno" ? ESCALA_DESEMPENO_MIN : 0;
-    const bins = suprimido ? [] : histograma(valores, min, rango.max, rango.ancho);
+    const bins = suprimido ? [] : histograma(valores, rango.min, rango.max, rango.ancho);
     return {
       escala,
       n: suprimido ? 0 : valores.length,
@@ -71,6 +71,3 @@ export async function reportePuntajes(db: Db, filtros: Filtros): Promise<Reporte
     }),
   };
 }
-
-/** Los 7 ítems de desempeño valen 1-5, así que el mínimo es 7. */
-const ESCALA_DESEMPENO_MIN = 7;

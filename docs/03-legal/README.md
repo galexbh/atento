@@ -17,6 +17,7 @@ Todos los documentos de esta carpeta son **borradores** redactados por el agente
 | 7 | `creditos-y-licencias.md` | Vanderbilt/NICHQ/AAP, ítems CC BY, código MIT, datos CC BY, GeoJSON, imágenes | Borrador 0.1 (imágenes y versión GeoJSON pendientes) |
 | 8 | `acuerdo-socio-academico-plantilla.md` | Plantilla de acuerdo de uso de microdatos | Borrador 0.1 |
 | 9 | `politica-de-datos-abiertos.md` | Qué se publica, licencia, cita, versionado anual | Borrador 0.1 |
+| 10 | `consentimiento-docente.md` | Pantalla previa de la versión docente; `versionConsentimiento: "2026-10-12"`. Sin página legal propia: se muestra en `/docente/consentimiento` y la privacidad lo resume en §13 | Borrador 0.1 |
 
 ## 2. Marco legal de referencia (verificado el 2026-10-11)
 

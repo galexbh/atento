@@ -122,7 +122,7 @@ Si no quedas conforme, puedes acudir a los tribunales mediante la garantía de h
 
 Atento trata datos **sobre** niños y niñas de 6 a 12 años, pero **nunca los recoge de ellos directamente**. La información la aporta un adulto responsable, que declara serlo en el consentimiento. Los datos del menor son anónimos: edad en años, sexo y respuestas. No hay nombre ni fecha de nacimiento.
 
-Los docentes solo deben usar el sitio con autorización de la familia.
+Los docentes solo deben usar el sitio con autorización de la familia. La **versión para docentes** (`/docente`) recoge solo el departamento y el municipio **de la escuela**, la edad y el sexo del niño o niña, las respuestas y, si la familia se lo dio, el **código de vínculo**; solo se guarda si el docente marca la casilla de investigación (consentimiento docente versión 2026-10-12). El código sirve para comparar de forma anónima y agregada lo que ven familia y docente: nadie puede consultar las respuestas de otra persona con él. Las respuestas de docentes no se suman al mapa público.
 
 ## 14. Seguridad
 

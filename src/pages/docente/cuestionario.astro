@@ -1,0 +1,60 @@
+---
+import Cuestionario, { type PresentacionDesempeno } from "@/components/Cuestionario.astro";
+import Base from "@/layouts/Base.astro";
+import { ordenarItemsDocente, paginasDe } from "@/lib/cliente/orden";
+import { PASOS_DOCENTE } from "@/lib/cliente/pasos";
+import { claveSitioTurnstile } from "@/lib/compartido/turnstile-sitio";
+import { INSTRUMENTO_DOCENTE, obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
+
+const instrumento = obtenerInstrumento(INSTRUMENTO_DOCENTE);
+const items = ordenarItemsDocente(INSTRUMENTO_DOCENTE);
+const paginas = paginasDe(items);
+
+// Desempeño (T36–T43): 36–38 rendimiento académico y 39–43 conducta escolar, como en la fuente.
+const ACADEMICO: Record<string, string> = {
+  T36: "lectura",
+  T37: "matematicas",
+  T38: "escritura",
+};
+const desempeno: Record<string, PresentacionDesempeno> = {};
+for (const item of instrumento.items.filter((i) => i.tipo === "desempeno")) {
+  const icono = ACADEMICO[item.id];
+  desempeno[item.id] = icono
+    ? { icono, prefijo: "Rendimiento académico:" }
+    : { icono: item.id === "T39" ? "amigos" : "escuela", prefijo: "Conducta escolar:" };
+}
+---
+
+<Base
+  titulo="Cuestionario para docentes"
+  descripcion="Cuestionario de Atento para docentes: 43 preguntas sobre atención, actividad y conducta en clase."
+  noindex
+  compacta
+>
+  <Cuestionario
+    items={items}
+    paginas={paginas}
+    instrumentoId={INSTRUMENTO_DOCENTE}
+    version={instrumento.version}
+    claveTurnstile={claveSitioTurnstile()}
+    desempeno={desempeno}
+    textoEnviar="Ver la hoja para imprimir"
+    pasos={PASOS_DOCENTE}
+    etiquetaPasos="Pasos de la versión docente"
+  >
+    <h1>Piense en lo que ha observado desde el inicio del año escolar</h1>
+    <p class="grande">
+      Para cada frase, marque con qué frecuencia ocurre en clase, considerando lo esperable para
+      un niño o niña de su edad. No hay respuestas buenas ni malas.
+    </p>
+    <p class="suave">
+      Al final hay una página sobre su desempeño en lectura, matemáticas, escritura y conducta
+      escolar. Su avance se guarda en este dispositivo.
+    </p>
+  </Cuestionario>
+</Base>
+
+<script>
+  import { iniciarCuestionarioDocente } from "@/lib/cliente/docente";
+  iniciarCuestionarioDocente(document.getElementById("cuestionario") as HTMLElement);
+</script>

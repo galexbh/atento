@@ -196,3 +196,65 @@ export function redondear(valor: number | null, decimales = 1): number | null {
   const factor = 10 ** decimales;
   return Math.round(valor * factor) / factor;
 }
+
+export interface Kappa {
+  /** Kappa de Cohen. */
+  kappa: number;
+  /** Acuerdo observado (0–1). */
+  po: number;
+  /** Acuerdo esperado por azar (0–1). */
+  pe: number;
+  /** Error estándar aproximado. */
+  ee: number;
+  /** IC 95 % (z = 1,96), recortado a [-1, 1]. */
+  ic95: { inferior: number; superior: number };
+}
+
+/**
+ * Kappa de Cohen para dos evaluadores y una variable binaria, a partir de la tabla 2×2:
+ *
+ *                  evaluador B +   evaluador B −
+ *   evaluador A +       a               b
+ *   evaluador A −       c               d
+ *
+ * κ = (po − pe) / (1 − pe), con po = (a + d) / n y pe = p(A+)·p(B+) + p(A−)·p(B−).
+ * Error estándar: aproximación de Cohen (1960) EE = √(po(1 − po) / (n(1 − pe)²)), suficiente
+ * para un IC orientativo con n moderado. Devuelve null si n = 0 o si pe = 1 (los dos evaluadores
+ * responden siempre lo mismo y κ no está definido).
+ */
+export function kappaCohen(a: number, b: number, c: number, d: number, z = 1.96): Kappa | null {
+  const n = a + b + c + d;
+  if (n <= 0) return null;
+  const po = (a + d) / n;
+  const pA = (a + b) / n;
+  const pB = (a + c) / n;
+  const pe = pA * pB + (1 - pA) * (1 - pB);
+  if (pe >= 1) return null;
+  const kappa = (po - pe) / (1 - pe);
+  const ee = Math.sqrt((po * (1 - po)) / (n * (1 - pe) ** 2));
+  return {
+    kappa,
+    po,
+    pe,
+    ee,
+    ic95: {
+      inferior: Math.max(-1, kappa - z * ee),
+      superior: Math.min(1, kappa + z * ee),
+    },
+  };
+}
+
+/**
+ * IC 95 % de una correlación de Pearson con la transformación z de Fisher. Requiere n > 3 y
+ * |r| < 1; si no, devuelve null.
+ */
+export function intervaloPearson(
+  r: number,
+  n: number,
+  z = 1.96,
+): { inferior: number; superior: number } | null {
+  if (n <= 3 || !Number.isFinite(r) || Math.abs(r) >= 1) return null;
+  const zr = Math.atanh(r);
+  const ee = 1 / Math.sqrt(n - 3);
+  return { inferior: Math.tanh(zr - z * ee), superior: Math.tanh(zr + z * ee) };
+}

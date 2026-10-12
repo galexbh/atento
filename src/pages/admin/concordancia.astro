@@ -1,0 +1,109 @@
+---
+import { env } from "cloudflare:workers";
+import Barras from "@/components/admin/Barras.astro";
+import Cifra from "@/components/admin/Cifra.astro";
+import Tabla from "@/components/admin/Tabla.astro";
+import Admin from "@/layouts/Admin.astro";
+import { fmtCelda, fmtDecimal, fmtPct, fmtPctIc, SUPRIMIDO } from "@/lib/admin/formato";
+import { protegerPagina, registrarAuditoria } from "@/lib/admin/proteger";
+import { reporteConcordancia } from "@/lib/reportes/concordancia";
+import { parsearFiltros } from "@/lib/reportes/filtros";
+
+const auth = await protegerPagina(Astro.request);
+if (auth instanceof Response) return auth;
+const filtros = parsearFiltros(Astro.url.searchParams);
+const d = await reporteConcordancia(env.DB, filtros);
+await registrarAuditoria(auth, "consulta", { ...filtros, reporte: "concordancia" }, null);
+
+const fmtKappa = (k: (typeof d.acuerdo)[number]["kappa"]) =>
+  k
+    ? `${fmtDecimal(k.valor, 2)} (IC95 ${fmtDecimal(k.ic95.inferior, 2)} a ${fmtDecimal(k.ic95.superior, 2)})`
+    : SUPRIMIDO;
+const filasAcuerdo = d.acuerdo.map((a) => ({
+  escala: a.etiqueta,
+  n: fmtCelda(a.n),
+  ambos: fmtCelda(a.tabla.ambos),
+  soloFamilia: fmtCelda(a.tabla.soloFamilia),
+  soloDocente: fmtCelda(a.tabla.soloDocente),
+  ninguno: fmtCelda(a.tabla.ninguno),
+  acuerdo: fmtPctIc(a.acuerdo),
+  kappa: fmtKappa(a.kappa),
+}));
+const filasCorrelacion = d.correlacion.map((c) => ({
+  escala: c.etiqueta,
+  n: fmtCelda(c.n),
+  r:
+    c.r === null
+      ? SUPRIMIDO
+      : `${fmtDecimal(c.r, 2)}${c.ic95 ? ` (IC95 ${fmtDecimal(c.ic95.inferior, 2)} a ${fmtDecimal(c.ic95.superior, 2)})` : ""}`,
+  familia: c.mediaFamilia === null ? SUPRIMIDO : fmtDecimal(c.mediaFamilia),
+  docente: c.mediaDocente === null ? SUPRIMIDO : fmtDecimal(c.mediaDocente),
+}));
+---
+
+<Admin titulo="Concordancia padre–docente" usuario={auth} filtros={filtros} activo="concordancia">
+  <section class="rejilla" aria-label="Pares">
+    <Cifra etiqueta="Pares familia–docente" valor={fmtCelda(d.pares)} nota="Mismo código de vínculo" />
+    <Cifra etiqueta="Positivo en ambos entornos" valor={fmtPct(d.dosEntornos)} nota={fmtPctIc(d.dosEntornos)} />
+    <Cifra etiqueta="Familias con código" valor={fmtCelda(d.familiasConCodigo)} />
+    <Cifra etiqueta="Docentes con código" valor={fmtCelda(d.docentesConCodigo)} />
+    <Cifra etiqueta="Docentes sin código" valor={fmtCelda(d.docentesSinCodigo)} nota="No se pueden emparejar" />
+  </section>
+
+  <section class="panel">
+    <h2>Acuerdo en positividad por escala</h2>
+    <p class="panel__nota">
+      Tabla 2×2 de cada escala (positivo según la familia / según el docente), porcentaje de
+      acuerdo con IC de Wilson y kappa de Cohen con IC 95 % (error estándar aproximado de Cohen).
+      «Oposición/conducta» compara oposición o conducta de la familia con la escala combinada del
+      docente (ítems 19–28): no son equivalentes ítem a ítem.
+    </p>
+    <Barras
+      titulo="% de acuerdo familia–docente por escala"
+      unidad="%"
+      max={100}
+      nombreValor="% de acuerdo"
+      datos={d.acuerdo.map((a) => ({ etiqueta: a.etiqueta, valor: a.acuerdo.pct, suprimido: a.acuerdo.suprimido, detalle: `${fmtPctIc(a.acuerdo)} · kappa ${fmtKappa(a.kappa)}` }))}
+    />
+    <Tabla
+      titulo="Acuerdo por escala"
+      columnas={[
+        { clave: "escala", etiqueta: "Escala" },
+        { clave: "n", etiqueta: "Pares", tipo: "num" },
+        { clave: "ambos", etiqueta: "Ambos +", tipo: "num" },
+        { clave: "soloFamilia", etiqueta: "Solo familia +", tipo: "num" },
+        { clave: "soloDocente", etiqueta: "Solo docente +", tipo: "num" },
+        { clave: "ninguno", etiqueta: "Ninguno +", tipo: "num" },
+        { clave: "acuerdo", etiqueta: "% acuerdo (IC95)", tipo: "num" },
+        { clave: "kappa", etiqueta: "Kappa (IC95)", tipo: "num" },
+      ]}
+      filas={filasAcuerdo}
+    />
+  </section>
+
+  <section class="panel">
+    <h2>Correlación de puntajes (ítems 1–18, equivalentes en ambos formularios)</h2>
+    <p class="panel__nota">Pearson con IC 95 % (z de Fisher). Puntajes 0–27 por escala y 0–54 en el total.</p>
+    <Tabla
+      titulo="Correlación familia–docente"
+      columnas={[
+        { clave: "escala", etiqueta: "Puntaje" },
+        { clave: "n", etiqueta: "Pares", tipo: "num" },
+        { clave: "r", etiqueta: "r de Pearson (IC95)", tipo: "num" },
+        { clave: "familia", etiqueta: "Media familia", tipo: "num" },
+        { clave: "docente", etiqueta: "Media docente", tipo: "num" },
+      ]}
+      filas={filasCorrelacion}
+    />
+  </section>
+
+  <section class="panel">
+    <h2>Regla de emparejamiento</h2>
+    <p class="panel__nota">{d.regla} Códigos con filas repetidas: {fmtCelda(d.codigosRepetidos)}.</p>
+    <p class="panel__nota">
+      Con menos de 5 pares no se muestra ninguna medida. Las respuestas docentes no entran en el
+      mapa público. Cribado comunitario, no diagnóstico: el criterio de dos entornos aquí es solo
+      orientativo.
+    </p>
+  </section>
+</Admin>

@@ -79,6 +79,21 @@ async function sembrar() {
     ...repetir(4, { municipio: "0803", consentimiento_investigacion: 0 }),
     ...repetir(2, { municipio: "0803", completado: 0 }),
     ...repetir(7, { creado_en: "2025-06-01", pos_inatencion: 1 }),
+    // Versión docente: describe a niños que ya pudo contar su familia; nunca entra en el mapa
+    // (ni en 0801 ni como departamento nuevo 05) aunque tenga consentimiento y esté completa.
+    ...repetir(6, {
+      informante: "docente",
+      version_instrumento: "vanderbilt-docente-es-1.0",
+      pos_inatencion: 1,
+      codigo_vinculo: "ABCD2345",
+    }),
+    ...repetir(9, {
+      departamento: "05",
+      municipio: "0501",
+      informante: "docente",
+      version_instrumento: "vanderbilt-docente-es-1.0",
+      creado_en: "2025-06-01",
+    }),
   ]);
 }
 
@@ -186,6 +201,40 @@ describe("GET /api/publico/datos", () => {
     const r2 = await exports.default.fetch(url, { headers: { "If-None-Match": etag } });
     expect(r2.status).toBe(304);
     expect(r2.headers.get("X-Cache")).toBe("HIT");
+  });
+
+  it("las respuestas docentes no aparecen en /api/publico/datos ni en agregados 'todas'", async () => {
+    for (const anio of [2026, 2025]) {
+      const r = await exports.default.fetch(`${ORIGEN}/api/publico/datos?anio=${anio}`);
+      expect(r.status).toBe(200);
+      const p = await r.json<Publicacion>();
+      expect(p.departamentos.some((d) => d.codigo === "05")).toBe(false);
+      expect(p.municipios.some((m) => m.codigo === "0501")).toBe(false);
+      if (anio === 2026) {
+        expect(p.nacional.n).toBe(27);
+        expect(p.municipios.find((m) => m.codigo === "0801")).toMatchObject({
+          n: 10,
+          pctIndicadores: 30,
+        });
+      } else {
+        expect(p.nacional.n).toBe(7);
+      }
+    }
+    // El panel sí las ve en su propia versión de agregados_municipio, nunca en "todas".
+    await ejecutarCronDiario(env, new Date("2027-01-02T03:00:00Z"));
+    const todas = await env.DB.prepare(
+      "SELECT n FROM agregados_municipio WHERE periodo = '2026' AND municipio = '0801' AND version_instrumento = 'todas'",
+    ).first<{ n: number }>();
+    const soloDocente = await env.DB.prepare(
+      "SELECT n FROM agregados_municipio WHERE periodo = '2026' AND municipio = '0801' AND version_instrumento = 'vanderbilt-docente-es-1.0'",
+    ).first<{ n: number }>();
+    // 0801 en 2026: las 10 respuestas de familias; los 6 docentes no suman en "todas".
+    expect(todas?.n).toBe(10);
+    expect(soloDocente?.n).toBe(6);
+    const depto05 = await env.DB.prepare(
+      "SELECT count(*) AS n FROM agregados_municipio WHERE departamento = '05' AND version_instrumento = 'todas'",
+    ).first<{ n: number }>();
+    expect(depto05?.n).toBe(0);
   });
 
   it("CSV UTF-8 con BOM y nombre de archivo versionado", async () => {

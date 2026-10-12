@@ -7,5 +7,6 @@ Disallow: /api/
 Disallow: /admin/
 Disallow: /resultado
 Disallow: /cribado/
+Disallow: /docente/
 
 Sitemap: https://atento.galexbh.dev/sitemap-index.xml

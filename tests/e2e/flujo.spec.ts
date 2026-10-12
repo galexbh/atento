@@ -126,11 +126,16 @@ test("flujo completo con investigación: envía a la API y muestra nivel alto", 
   // Con todo en 3, también hay alertas de comorbilidad (bloque combinado).
   await expect(page.locator('[data-alerta="combinada"]')).toBeVisible();
 
-  // Invitar al docente muestra el código y nunca el resultado.
+  // Invitar al docente: enlace a /docente?codigo= con el código y nunca el resultado.
   await page.getByRole("button", { name: "Invitar al docente" }).click();
   const mensaje = await page.locator("#mensaje-docente").inputValue();
-  expect(mensaje).toContain("/cribado/consentimiento");
-  expect(mensaje).not.toMatch(/alto|moderado|bajo/i);
+  const codigo = ((await page.locator("#codigo-grande").textContent()) ?? "").replace("-", "");
+  expect(mensaje).toMatch(/\/docente\?codigo=[A-Z2-9]{8}/);
+  expect(mensaje).toContain(`/docente?codigo=${codigo}`);
+  expect(mensaje).not.toContain("/cribado/");
+  expect(mensaje).not.toMatch(/alto|moderado|bajo|nivel|indicadores/i);
+  const whatsapp = await page.locator("#whatsapp").getAttribute("href");
+  expect(decodeURIComponent(whatsapp ?? "")).toContain(`/docente?codigo=${codigo}`);
 
   // El progreso se borró y el resultado quedó sin ítems.
   const claves = await page.evaluate(() => ({
@@ -179,7 +184,7 @@ test("el progreso del cuestionario se restaura al recargar", async ({ page }) =>
   await page.getByLabel("¿En qué municipio?").selectOption("0501");
   await page.getByLabel("10", { exact: true }).check({ force: true });
   await page.getByLabel("Niña", { exact: true }).check({ force: true });
-  await page.getByLabel("Docente", { exact: true }).check({ force: true });
+  await page.getByLabel("Otro cuidador", { exact: true }).check({ force: true });
   await page.getByRole("button", { name: "Continuar" }).click();
   await esperarListo(page);
   await responderPagina(page, 1);
@@ -191,10 +196,29 @@ test("el progreso del cuestionario se restaura al recargar", async ({ page }) =>
   await expect(page.locator('fieldset.item[data-pagina="1"]:visible')).toHaveCount(6);
 });
 
+test("/cribado/datos ya no ofrece 'docente' y enlaza a la versión para docentes", async ({
+  page,
+}) => {
+  await page.goto("/cribado/consentimiento");
+  await esperarListo(page);
+  await page.getByLabel(/Confirmo que soy mayor de 18/).check();
+  await page.getByLabel(/He leído y acepto/).check();
+  await page.getByRole("button", { name: "Empezar el cuestionario" }).click();
+  await esperarListo(page);
+  await expect(page.locator('input[name="informante"]')).toHaveCount(3);
+  await expect(page.locator('input[name="informante"][value="docente"]')).toHaveCount(0);
+  await expect(page.getByLabel("Docente", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "versión para docentes" })).toHaveAttribute(
+    "href",
+    "/docente",
+  );
+});
+
 test("páginas públicas sin violaciones serias de accesibilidad", async ({ page }) => {
   const rutas = [
     "/",
     "/metodologia",
+    "/docente",
     "/contacto",
     "/legal/terminos",
     "/legal/privacidad",

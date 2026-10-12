@@ -15,7 +15,7 @@
  * un script inline. Sube VERSION para invalidar la caché anterior.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `atento-${VERSION}`;
 const DB_NOMBRE = "atento-cola";
 const DB_ALMACEN = "envios";
@@ -28,6 +28,11 @@ const APP_SHELL = [
   "/cribado/datos",
   "/cribado/cuestionario",
   "/resultado",
+  "/docente",
+  "/docente/consentimiento",
+  "/docente/datos",
+  "/docente/cuestionario",
+  "/docente/gracias",
   "/offline",
   "/manifest.webmanifest",
   "/marca/favicon.svg",

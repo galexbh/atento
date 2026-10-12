@@ -5,6 +5,8 @@ import Base from "@/layouts/Base.astro";
 import { INSTRUMENTO_ACTUAL, obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
 
 const instrumento = obtenerInstrumento(INSTRUMENTO_ACTUAL);
+// Origen público para el enlace que se comparte con el docente (/docente?codigo=...).
+const sitio = (Astro.site ?? new URL("https://atento.galexbh.dev")).origin;
 const niveles = ["bajo", "moderado", "alto"] as const;
 const alertasIds = ["oposicion", "conducta", "ansiedad_depresion"] as const;
 
@@ -35,7 +37,7 @@ const ETIQUETA_NIVEL = {
   noindex
   claseCuerpo="pagina-resultado"
 >
-  <article class="contenedor resultado" id="resultado" data-instrumento-nombre={instrumento.nombre} data-instrumento-version={instrumento.version}>
+  <article class="contenedor resultado" id="resultado" data-instrumento-nombre={instrumento.nombre} data-instrumento-version={instrumento.version} data-sitio={sitio}>
     <section class="sin-resultado" id="sin-resultado" hidden aria-labelledby="sin-titulo">
       <div class="sin-resultado__ilus" set:html={ilustracion("vacio", { decorativo: true, clase: "ilustracion" })} />
       <h1 id="sin-titulo">Aún no hay un resultado en este dispositivo</h1>
@@ -186,7 +188,8 @@ const ETIQUETA_NIVEL = {
           <h2 id="docente-titulo">Invitar al docente</h2>
           <p>
             La mirada de la escuela es muy valiosa. Comparte este mensaje con el docente: incluye el
-            enlace al cuestionario y tu código de vínculo, <strong>nunca tu resultado</strong>.
+            enlace a la versión para docentes con tu código de vínculo, <strong>nunca tu resultado</strong>.
+            Ni tú verás sus respuestas ni el docente verá las tuyas.
           </p>
           <p class="codigo">
             Código de vínculo: <strong id="codigo-docente" class="tabular"></strong>

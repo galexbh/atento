@@ -39,6 +39,23 @@ Presentación sugerida (solo para el PDF al profesional, no para la familia):
 | sí | no | Indicadores de presentación inatenta |
 | no | sí | Indicadores de presentación hiperactiva-impulsiva |
 
+## 2 bis. Reglas Vanderbilt docente 1ª ed. (`vanderbilt-docente-es-1.0`)
+
+Detalle, fuente y dudas en [`version-docente.md`](./version-docente.md). Ítems `T01–T43`.
+
+| Subescala | Ítems | Regla de positivo | Escala interna |
+|---|---|---|---|
+| Inatención | 1–9 | ≥ 6 ítems con 2–3 | `inatencion` |
+| Hiperactividad-impulsividad | 10–18 | ≥ 6 ítems con 2–3 | `hiperactividad` |
+| Oposición desafiante/conducta (combinada) | 19–28 | ≥ 3 ítems con 2–3 | `conducta` |
+| Ansiedad / depresión | 29–35 | ≥ 3 ítems con 2–3 | `ansiedad_depresion` |
+| Desempeño (académico 36–38, conducta escolar 39–43) | 36–43 | ≥ 1 ítem con 4–5 | `desempeno` |
+| Oposición (separada) | — | sin ítems: nunca positiva | `oposicion` |
+
+El nivel y las alertas se calculan con las mismas reglas de las secciones 3 y 4 y se guardan para
+investigación, pero **no se muestran al docente** (la API responde sin `nivel` y la hoja imprimible
+solo muestra conteos). Las respuestas docentes no entran en el mapa público.
+
 ## 3. Nivel Atento
 
 Es lo único que ve la familia, junto con las alertas.

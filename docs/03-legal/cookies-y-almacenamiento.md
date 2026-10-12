@@ -15,6 +15,8 @@ Atento **no usa cookies de rastreo ni de publicidad**, ni analítica de terceros
 | `atento:progreso` `[CONFIRMAR nombre de clave con el agente técnico]` | Respuestas en curso del cuestionario | Que no pierdas el avance si cierras la pestaña | Hasta que termines el cuestionario o lo borres | No |
 | `atento:tema` `[CONFIRMAR]` | `claro` / `oscuro` / `sistema` | Recordar tu preferencia visual | Hasta que lo borres | No |
 | `atento:consentimiento` `[CONFIRMAR si existe]` | Versión del consentimiento aceptado | No volver a mostrar la pantalla en la misma sesión | Hasta que lo borres | Solo la versión, junto con las respuestas |
+| `atento:docente:codigo`, `atento:docente:consentimiento`, `atento:docente:datos`, `atento:docente:progreso` | Versión para docentes: código de vínculo recibido en el enlace, consentimiento, datos de la escuela y del niño o niña, avance del cuestionario | Que el docente no pierda el avance | El código se borra al terminar; el resto, hasta que lo borres | Solo si se autorizó investigación, junto con las respuestas |
+| `atento:docente:hoja` | Resumen de las respuestas del docente para la hoja imprimible (conteos, sin nivel) | Poder imprimirla | 30 días o hasta que la borres | No |
 
 Puedes borrar todo desde la configuración de tu navegador ("borrar datos del sitio") o con el botón "Borrar mi progreso" del sitio. `[CONFIRMAR que existe el botón]`
 

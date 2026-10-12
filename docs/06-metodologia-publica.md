@@ -1,6 +1,6 @@
 # Metodología y limitaciones
 
-*Borrador de la página pública de Atento. Lenguaje dirigido a familias, docentes y personal de salud. Última revisión: 2026-10-11. Pendiente de revisión por el asesor clínico.*
+*Borrador de la página pública de Atento. Lenguaje dirigido a familias, docentes y personal de salud. Última revisión: 2026-10-12. Pendiente de revisión por el asesor clínico.*
 
 ---
 
@@ -26,6 +26,12 @@ Un resultado "con indicadores" no significa que el niño tenga TDAH. Un resultad
 4. El resultado que ve la familia es una de tres frases: *"No se observan indicadores suficientes"*, *"Se observan indicadores de inatención / de hiperactividad-impulsividad / de ambos"*, siempre seguidas de la recomendación de consultar si hay preocupación.
 5. Las preguntas de la escala sobre conducta oposicionista, conducta disocial y ansiedad/depresión se muestran y se puntúan según la regla publicada, pero el resultado las presenta solo como "otros indicadores a comentar con el profesional", sin etiquetas.
 6. No hay inteligencia artificial, ni ponderaciones ocultas, ni ajustes por municipio: la misma respuesta siempre da el mismo resultado. El código que hace el cálculo es público y cualquiera puede revisarlo.
+
+## Versión para docentes
+
+El TDAH requiere que las señales aparezcan en más de un entorno (por ejemplo, la casa y la escuela). Por eso existe una **versión para docentes** en [/docente](/docente): la escala **NICHQ Vanderbilt Assessment Scale – Teacher Informant, 1.ª edición (2002), versión en español** (43 preguntas, de 5 a 8 minutos), © American Academy of Pediatrics y NICHQ, con sus reglas de puntuación publicadas. El docente responde con autorización de la familia y, al terminar, **no ve un nivel ni un resultado**: solo una hoja imprimible con el resumen de sus respuestas para entregar a la familia o al profesional de salud.
+
+La familia puede invitar al docente con un enlace que lleva un **código de vínculo**. Ese código solo permite comparar, de forma anónima y agregada, lo que ven familias y docentes; nadie puede consultar las respuestas de otra persona con él. Las respuestas de docentes **no entran en el mapa público**: describen a niños que quizá ya contó su familia, y sumarlas contaría dos veces al mismo niño.
 
 ## Cómo se construye el mapa
 

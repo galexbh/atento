@@ -1,0 +1,135 @@
+---
+import Pasos from "@/components/Pasos.astro";
+import Base from "@/layouts/Base.astro";
+import { PASOS_DOCENTE } from "@/lib/cliente/pasos";
+
+/** Consentimiento docente, versión 2026-10-12 (docs/03-legal/consentimiento-docente.md). */
+---
+
+<Base
+  titulo="Antes de empezar (docentes)"
+  descripcion="Consentimiento de la versión docente de Atento: cribado, no diagnóstico; con autorización de la familia y sin datos que identifiquen."
+  noindex
+  compacta
+>
+  <div class="flujo">
+    <Pasos actual={1} pasos={PASOS_DOCENTE} etiqueta="Pasos de la versión docente" />
+    <form class="contenedor flujo__cuerpo" id="consentimiento" novalidate>
+      <h1>Antes de empezar</h1>
+      <p class="grande">
+        Este cuestionario toma de 5 a 8 minutos. Es un <strong>cribado</strong>, no un diagnóstico.
+        Al terminar verá una hoja con el resumen de sus respuestas para entregar a la familia o al
+        profesional de salud. <strong>No verá un nivel ni un resultado.</strong>
+      </p>
+      <p>No le pedimos su nombre, el del niño o niña ni el de la escuela. Marque las casillas para continuar.</p>
+
+      <fieldset>
+        <legend class="visualmente-oculto">Confirmaciones</legend>
+        <label class="casilla">
+          <input type="checkbox" name="docente" id="c-docente" required />
+          <span>
+            Soy docente del niño o niña y la familia me pidió o autorizó completar este
+            cuestionario. Entiendo que Atento es un cribado y <strong>no un diagnóstico</strong>.
+          </span>
+        </label>
+        <label class="casilla">
+          <input type="checkbox" name="terminos" id="c-terminos" required />
+          <span>
+            He leído y acepto los <a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> y la{" "}
+            <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a>.
+          </span>
+        </label>
+        <label class="casilla casilla--opcional">
+          <input type="checkbox" name="investigacion" id="c-investigacion" />
+          <span>
+            <strong>Opcional.</strong> Autorizo que mis respuestas, de forma anónima, se usen para
+            investigación.
+          </span>
+        </label>
+      </fieldset>
+
+      <details class="plegable">
+        <summary>¿Qué implica la casilla opcional?</summary>
+        <div class="prosa">
+          <p>
+            Si marca esta casilla, guardamos sus respuestas en una base de datos <strong>sin nada que identifique</strong>:
+            solo departamento y municipio de la escuela, edad en años y sexo del niño o niña, que responde un docente, las
+            respuestas, la fecha, la duración aproximada y, si la familia se lo dio, el código de vínculo.
+          </p>
+          <p>
+            El código de vínculo solo sirve para comparar, de forma anónima y agrupada, lo que ven las familias y los
+            docentes. Nadie puede consultar las respuestas de otra persona con ese código.
+          </p>
+          <p>
+            Las respuestas de docentes <strong>no se suman al mapa público</strong> para no contar dos veces al mismo niño.
+            Los datos fila por fila nunca se publican; solo podrían compartirse con una universidad o centro de
+            investigación, bajo acuerdo escrito y aval de un comité de ética, y siempre anónimos.
+          </p>
+          <p>Los datos se guardan en Cloudflare, en servidores que pueden estar fuera de Honduras.</p>
+          <p>
+            Puede pedir que borremos su respuesta escribiendo a <a href="mailto:info@galexbh.dev">info@galexbh.dev</a> con
+            el código de vínculo que usó. Sin código no podemos saber cuál es la suya.
+          </p>
+          <p>Si no marca la casilla, nada sale de este dispositivo: solo se genera la hoja para imprimir.</p>
+        </div>
+      </details>
+
+      <p class="flujo__ayuda" id="ayuda-consentimiento" aria-live="polite">
+        Marque las dos primeras casillas para continuar.
+      </p>
+      <div class="flujo__acciones">
+        <a href="/docente" class="boton boton--texto">Volver</a>
+        <button type="submit" class="boton boton--primario boton--grande" id="continuar" disabled aria-describedby="ayuda-consentimiento">
+          Continuar
+        </button>
+      </div>
+    </form>
+  </div>
+</Base>
+
+<style>
+  .casilla--opcional {
+    border-style: dashed;
+  }
+  .plegable {
+    margin-top: var(--espacio-4);
+  }
+</style>
+
+<script>
+  import { almacenDocente, VERSION_CONSENTIMIENTO_DOCENTE } from "@/lib/cliente/almacen";
+
+  const form = document.getElementById("consentimiento") as HTMLFormElement;
+  const docente = document.getElementById("c-docente") as HTMLInputElement;
+  const terminos = document.getElementById("c-terminos") as HTMLInputElement;
+  const investigacion = document.getElementById("c-investigacion") as HTMLInputElement;
+  const continuar = document.getElementById("continuar") as HTMLButtonElement;
+  const ayuda = document.getElementById("ayuda-consentimiento") as HTMLElement;
+
+  const previo = almacenDocente.leerConsentimiento();
+  if (previo?.version === VERSION_CONSENTIMIENTO_DOCENTE) {
+    investigacion.checked = previo.investigacion;
+  }
+
+  function actualizar(): void {
+    const listo = docente.checked && terminos.checked;
+    continuar.disabled = !listo;
+    ayuda.textContent = listo
+      ? "Listo. Puede continuar."
+      : "Marque las dos primeras casillas para continuar.";
+  }
+
+  form.addEventListener("change", actualizar);
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!(docente.checked && terminos.checked)) return;
+    almacenDocente.guardarConsentimiento({
+      version: VERSION_CONSENTIMIENTO_DOCENTE,
+      investigacion: investigacion.checked,
+      fecha: new Date().toISOString(),
+    });
+    window.location.href = "/docente/datos";
+  });
+  actualizar();
+  form.dataset.listo = "1";
+</script>

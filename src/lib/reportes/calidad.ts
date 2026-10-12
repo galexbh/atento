@@ -1,6 +1,7 @@
 /**
  * Reporte 8: calidad de datos.
- * - Patrón "todo igual": todos los ítems de frecuencia con el mismo valor.
+ * - Patrón "todo igual": todos los ítems de frecuencia con el mismo valor (padres V01–V47,
+ *   Atento A01–A18 y docente T01–T35; se excluyen los de desempeño V48–V54 y T36–T43).
  * - Duración < 120 s.
  * - Duplicados sospechosos: mismo día + municipio + edad + sexo + ítems idénticos.
  */
@@ -21,7 +22,10 @@ export interface ReporteCalidad {
 
 export function esTodoIgual(items: Record<string, number>): boolean {
   const valores = Object.entries(items)
-    .filter(([id]) => /^[VA]\d{2}$/.test(id) && !/^V(48|49|5\d)$/.test(id))
+    .filter(
+      ([id]) =>
+        /^[VAT]\d{2}$/.test(id) && !/^V(48|49|5\d)$/.test(id) && !/^T(3[6-9]|4\d)$/.test(id),
+    )
     .map(([, v]) => v);
   if (valores.length < 5) return false;
   return valores.every((v) => v === valores[0]);

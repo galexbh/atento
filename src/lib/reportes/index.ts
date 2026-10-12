@@ -2,6 +2,7 @@
 import { reporteCalidad } from "./calidad";
 import { reporteComorbilidad } from "./comorbilidad";
 import type { Db } from "./comun";
+import { reporteConcordancia } from "./concordancia";
 import { reporteDemografia } from "./demografia";
 import { reporteDesempeno } from "./desempeno";
 import type { Filtros } from "./filtros";
@@ -26,6 +27,7 @@ export const NOMBRES_REPORTE = [
   "calidad",
   "investigacion",
   "historico",
+  "concordancia",
 ] as const;
 
 export type NombreReporte = (typeof NOMBRES_REPORTE)[number];
@@ -67,6 +69,8 @@ export async function ejecutarReporte(
       return reporteInvestigacion(db, filtros);
     case "historico":
       return reporteHistorico(db, filtros);
+    case "concordancia":
+      return reporteConcordancia(db, filtros);
   }
 }
 

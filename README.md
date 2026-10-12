@@ -18,6 +18,13 @@ valoración integral. Atento nunca recoge datos identificables (ni nombres, ni c
 ubicación precisa): solo código de departamento y municipio, edad, sexo, quién responde y las
 respuestas al cuestionario. Más detalle en `docs/`.
 
+**Versión para docentes** (`/docente`): con autorización de la familia, el docente responde la
+NICHQ Vanderbilt para docentes (1.ª ed., 43 ítems) y recibe una hoja imprimible con el resumen de
+SUS respuestas, sin nivel ni interpretación. La familia lo invita desde `/resultado` con un enlace
+`/docente?codigo=XXXXXXXX`; el código solo sirve para emparejar, en el panel de investigación,
+ambas respuestas (no hay ningún endpoint que devuelva respuestas por código). Las respuestas
+docentes no entran en el mapa público. Detalle en `docs/02-instrumento/version-docente.md`.
+
 ## Stack
 
 | Capa          | Tecnología                                                                 |
@@ -59,7 +66,7 @@ Otros comandos útiles:
 
 | Ruta | Qué hace |
 | ---- | -------- |
-| `POST /api/respuesta` | Recibe un cuestionario (JSON ≤ 32 KB, `EsquemaEnvio` estricto), aplica el límite de 5 envíos/hora/IP justo después de validar (HMAC-SHA256 de la IP con `RATE_SALT` en KV, TTL 1 h; la IP nunca se guarda) y antes de consultar D1 o Turnstile, verifica Turnstile, puntúa **en servidor** y guarda en `respuestas` solo la fecha UTC (sin hora) y la duración redondeada a 10 s. Respuestas: 201 `{ok, nivel}`, 200 `{ok, duplicado}` si el id ya existía, 400 validación, 403 Turnstile, 413, 415, 429, 503 `{ok:false, motivo:"no_guardado"}` (D1) o `motivo:"configuracion"` (producción sin `RATE_SALT`). El honeypot `hp` relleno responde 201 sin guardar. |
+| `POST /api/respuesta` | Recibe un cuestionario (JSON ≤ 32 KB, `EsquemaEnvio` estricto), aplica el límite de 5 envíos/hora/IP justo después de validar (HMAC-SHA256 de la IP con `RATE_SALT` en KV, TTL 1 h; la IP nunca se guarda) y antes de consultar D1 o Turnstile, verifica Turnstile, puntúa **en servidor** y guarda en `respuestas` solo la fecha UTC (sin hora) y la duración redondeada a 10 s. Respuestas: 201 `{ok, nivel}`, 200 `{ok, duplicado}` si el id ya existía, 400 validación, 403 Turnstile, 413, 415, 429, 503 `{ok:false, motivo:"no_guardado"}` (D1) o `motivo:"configuracion"` (producción sin `RATE_SALT`). El honeypot `hp` relleno responde 201 sin guardar. Sirve a los dos flujos: el instrumento de padres no admite `informante: "docente"`; el docente (`vanderbilt-docente-es-1.0`) solo admite `informante: "docente"`, no admite `respuestasAtento` y responde 201 `{ok}` **sin** `nivel` (el servidor lo guarda igual para investigación). |
 | `GET /api/publico/datos?anio=2026[&formato=json\|csv]` | Publicación anual segura (ver "Regla de publicación"). JSON `{anio, preliminar, generadoEn, versionDataset, nacional, departamentos, municipios, serieTrimestral, clases}`; CSV UTF-8 con BOM, una fila por celda (`nivel,codigo,nombre,anio,n,pct_indicadores,ic95_inf,ic95_sup,pct_inatencion,pct_hiperactividad,suprimido,version_dataset,preliminar`, `n` vacío si suprimido), archivo `atento-datos-<anio>-<version>.csv`. Cabecera `Link: <https://creativecommons.org/licenses/by/4.0/>; rel="license"`. 400 con cualquier otro parámetro (meses, trimestres), 404 si el año no tiene datos publicables. Caché KV `agregado:publico:<anio>` 1 h, `Cache-Control: public, max-age=300, s-maxage=3600`, ETag/304. |
 | `GET /api/publico/anios` | Años publicables con la versión que se sirve: `{anios:[{anio, version, preliminar, generadoEn}]}`. |
 | `GET /api/agregado?periodo=2026&nivel=departamento\|municipio&version=todas` | **Compatibilidad, endurecido.** Solo `periodo` = año y `version=todas` (meses, trimestres, `acumulado` u otras versiones → 400). Delega en la publicación segura: misma forma `{periodo, nivel, version, versionDataset, preliminar, calculadoEn, datos:[{codigo, nombre, n, pct, ic95, suprimido, pctInatencion, pctHiperactividad, pctAmbas}]}` pero `n` es `null` en celdas suprimidas y `pctAmbas` siempre `null`. |
@@ -77,7 +84,9 @@ invalida la caché KV `agregado:*` y, cada 1 de enero, congela el año anterior 
 - Supresión: `n < 5` → `suprimido = 1`, porcentajes e IC en `NULL`, se conserva `n`.
 - Filas por departamento: `municipio = departamento + "00"` (p. ej. `0800` = Francisco Morazán); ningún
   municipio real usa ese código. `nivel=departamento` en la API devuelve `codigo` de 2 dígitos.
-- Se agrega por cada `version_instrumento` y, además, por `todas`.
+- Se agrega por cada `version_instrumento` y, además, por `todas`, salvo el instrumento docente
+  (`INSTRUMENTOS_FUERA_DEL_MAPA`), que solo se agrega en su propia versión para no contar dos veces
+  al mismo niño (familia y docente).
 - Turnstile solo en `ENTORNO=local` sin `TURNSTILE_SECRET` (o con la clave de prueba de Cloudflare):
   se acepta cualquier token y no se llama a siteverify. En preview y producción el secreto real es
   obligatorio; si falta o es la clave de prueba, toda verificación falla.
@@ -90,7 +99,8 @@ invalida la caché KV `agregado:*` y, cada 1 de enero, congela el año anterior 
 La página pública `/datos` (y `/datos/AAAA`, informe anual compartible) y `/api/publico/*` leen solo la
 tabla `publicaciones` (migración 0004), generada por la función pura `construirPublicacion()`
 (`src/lib/publico/datos.ts`) a partir de conteos agrupados (`src/lib/publico/consultar.ts`, solo
-`completado = 1 AND consentimiento_investigacion = 1`). Para impedir **ataques por diferencia**:
+`completado = 1 AND consentimiento_investigacion = 1` y sin el instrumento docente, filtrado por
+`version_instrumento`). Para impedir **ataques por diferencia**:
 
 1. Granularidad pública = **año calendario** para departamentos y municipios (sin mes, trimestre ni acumulado).
 2. **Supresión primaria**: celda con `n < 5` → `suprimido: true`, sin `n` ni porcentajes ("menos de 5").
@@ -120,14 +130,14 @@ que "total − suma de visibles" nunca es 1–4. `agregados_municipio` sigue exi
 ## Datos de prueba
 
 ```bash
-pnpm db:migrate:local          # esquema (migraciones 0001–0004)
+pnpm db:migrate:local          # esquema (migraciones 0001–0005)
 pnpm seed -- --n 2000          # respuestas sintéticas -> .wrangler/seed.sql -> D1 local (idempotente por semilla)
 pnpm agregar:local             # recalcula agregados_municipio en la D1 local e invalida la KV local
 pnpm build && pnpm preview     # http://127.0.0.1:8787
 curl "http://127.0.0.1:8787/api/publico/datos?anio=2026"     # o abre http://127.0.0.1:8787/datos
 ```
 
-`pnpm seed` acepta `--semilla 42` (distinta semilla = distintos ids), `--solo-sql` (solo genera el archivo)
+`pnpm seed` genera además pares familia–docente (~15 % de las familias completas con consentimiento) para el reporte de concordancia. Acepta `--semilla 42` (distinta semilla = distintos ids), `--solo-sql` (solo genera el archivo)
 y `--archivo ruta`. `pnpm agregar:local` acepta `--snapshot 2025` para crear el snapshot anual. Para
 disparar el cron real en local: `pnpm build && pnpm exec wrangler dev --test-scheduled` y luego
 `curl "http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*"`.
@@ -155,8 +165,9 @@ pnpm exec wrangler secret put ADMIN_PASSWORD_HASH     # solo ADMIN_MODO=password
 
 - Widget: "atento.galexbh.dev (Spin)", modo administrado, clave de sitio `0x4AAAAAAFUM2SiQtialMd1m`.
   Dominios permitidos: `atento.galexbh.dev`, `atento-preview.galexbh.dev`, `localhost`, `127.0.0.1`.
-- La clave de sitio está en `src/pages/cribado/cuestionario.astro` y se usa en cualquier build;
-  `astro dev` usa la clave de pruebas de Cloudflare. `PUBLIC_TURNSTILE_SITE_KEY` la sustituye.
+- La clave de sitio está en `src/lib/compartido/turnstile-sitio.ts` y la usan los dos cuestionarios
+  (familia y docente) con la misma acción; `astro dev` usa la clave de pruebas de Cloudflare.
+  `PUBLIC_TURNSTILE_SITE_KEY` la sustituye.
 - El widget se renderiza con `action: "envio-respuesta"` y el servidor exige esa acción y que
   `hostname` sea el host de `SITE_URL` (`localhost`/`127.0.0.1` solo con `ENTORNO=local`).
 - Rotar el secreto sin mostrarlo: leerlo con `wrangler turnstile widget get <sitekey> --json`
@@ -204,7 +215,13 @@ exportación de microdatos solo admite periodo anual o acumulado, departamento y
 instrumento; el `id` es un seudónimo HMAC distinto en cada descarga, el municipio se recodifica
 con el umbral calculado sobre todo el periodo y se aplica k-anonimato sobre
 (departamento, edad, sexo, informante): edad a tramo y, si sigue `n < 5`, sexo e informante en
-blanco (ver el codebook). Los CSV neutralizan fórmulas (`=`, `+`, `-`, `@`, TAB, CR al inicio).
+blanco (ver el codebook). El código de vínculo nunca se exporta: los microdatos llevan `par_id`
+(HMAC del código con la misma clave por descarga que `id`, vacío sin código) y las columnas
+`T01…T43` de la versión docente. El reporte `/admin/concordancia` (y
+`/api/admin/reporte/concordancia`) empareja familia y docente por código (la fila más reciente de
+cada informante), con acuerdo y kappa de Cohen por escala, Pearson de los ítems 1–18 y el % de
+positivos en ambos entornos, con la misma supresión n < 5 y auditoría. La migración `0005` añade
+un índice parcial sobre `codigo_vinculo`. Los CSV neutralizan fórmulas (`=`, `+`, `-`, `@`, TAB, CR al inicio).
 La migración `0003` añade un trigger `BEFORE INSERT` en `respuestas` que exige `items` JSON válido,
 `codigo_vinculo` de 8 caracteres (o NULL) y `version_consentimiento` con formato `AAAA-MM-DD`.
 
@@ -240,9 +257,9 @@ Documentación ampliada en [`docs/`](./docs/).
 
 - `astro.config.mjs` fija `site` y configura `@astrojs/sitemap`: como el sitio es `output: "server"`,
   solo entran las rutas estáticas y `/legal/*` se añade con `customPages`; se excluyen `/resultado`,
-  `/cribado/*`, `/admin/*`, `/api/*` y `/offline`. El sitemap se genera en `pnpm build` en
+  `/cribado/*`, `/docente/*` (el flujo; `/docente` sí entra), `/admin/*`, `/api/*` y `/offline`. El sitemap se genera en `pnpm build` en
   `dist/client/sitemap-index.xml` y se sirve como estático.
-- `public/robots.txt` permite todo salvo `/api/`, `/admin/`, `/resultado` y `/cribado/`.
+- `public/robots.txt` permite todo salvo `/api/`, `/admin/`, `/resultado`, `/cribado/` y `/docente/`.
 - `src/layouts/Base.astro` emite JSON-LD `WebSite` + `Organization` en las páginas indexables y
   `BreadcrumbList` en `/legal/*` y `/metodologia`; la portada añade `FAQPage` con las preguntas del
   `<details>`. No se usan tipos `Medical*`: Atento es cribado comunitario, no un servicio médico.
@@ -261,7 +278,7 @@ Documentación ampliada en [`docs/`](./docs/).
   (`#F7F4EE` fondo, `#1F6F8B` tema) e iconos 192/512 (`public/marca/`). `Base.astro` enlaza el
   manifest y declara `theme-color` para claro y oscuro.
 - `public/sw.js` (service worker, sin dependencias): precachea el app shell (`/`, flujo de cribado,
-  `/resultado`, `/offline`), sirve las navegaciones *network-first* con fallback a `/offline` y los
+  `/resultado`, `/docente` y su flujo, `/offline`), sirve las navegaciones *network-first* con fallback a `/offline` y los
   recursos del mismo origen *stale-while-revalidate*. **Nunca cachea `/api/*` ni `/admin/*`.**
 - Cola de envíos: si `POST /api/respuesta` falla por red, el cuerpo (sin datos identificables) se
   guarda en IndexedDB (`atento-cola`) y se reintenta con Background Sync (tag `atento-envio`) o en

@@ -197,3 +197,103 @@ describe("puntuar – atento-0.1 (reglas provisionales)", () => {
     expect(r.nivel).toBe("moderado");
   });
 });
+
+describe("puntuar – vanderbilt-docente-es-1.0 (reglas de la fuente)", () => {
+  const DOC = "vanderbilt-docente-es-1.0";
+  const docente = obtenerInstrumento(DOC);
+  const baseDocente = (): Record<string, number> => {
+    const r: Record<string, number> = {};
+    for (const item of docente.items) r[item.id] = item.tipo === "desempeno" ? 1 : 0;
+    return r;
+  };
+  const marcarDocente = (r: Record<string, number>, escala: Escala, n: number, valor: number) => {
+    for (const item of docente.items.filter((i) => i.escala === escala).slice(0, n)) {
+      r[item.id] = valor;
+    }
+    return r;
+  };
+  const p = (respuestas: Record<string, number>) => puntuar({ instrumentoId: DOC, respuestas });
+
+  it("todo 0 y desempeño 1: nada positivo, nivel bajo, oposición sin ítems (total 0)", () => {
+    const r = p(baseDocente());
+    expect(r.nivel).toBe("bajo");
+    expect(r.itemsFaltantes).toEqual([]);
+    expect(r.escalas.oposicion).toMatchObject({ total: 0, positivo: false });
+    expect(r.escalas.conducta.total).toBe(10);
+    expect(r.escalas.desempeno.total).toBe(8);
+  });
+
+  it("inatención: 5 con 2–3 no es positiva; 6 sí (ítems 1–9)", () => {
+    expect(p(marcarDocente(baseDocente(), "inatencion", 5, 3)).escalas.inatencion.positivo).toBe(
+      false,
+    );
+    expect(p(marcarDocente(baseDocente(), "inatencion", 6, 2)).escalas.inatencion.positivo).toBe(
+      true,
+    );
+  });
+
+  it("hiperactividad: umbral 6 de 9 (ítems 10–18)", () => {
+    const cinco = p(marcarDocente(baseDocente(), "hiperactividad", 5, 2));
+    const seis = p(marcarDocente(baseDocente(), "hiperactividad", 6, 2));
+    expect(cinco.escalas.hiperactividad.positivo).toBe(false);
+    expect(seis.escalas.hiperactividad.positivo).toBe(true);
+  });
+
+  it("oposición/conducta combinada (19–28): 2 no, 3 sí; alerta de conducta, nunca de oposición", () => {
+    expect(p(marcarDocente(baseDocente(), "conducta", 2, 3)).escalas.conducta.positivo).toBe(false);
+    const tres = p(marcarDocente(baseDocente(), "conducta", 3, 2));
+    expect(tres.escalas.conducta).toMatchObject({
+      positivo: true,
+      umbral: 3,
+      positivosCriterio: 3,
+    });
+    expect(tres.alertas).toEqual(["conducta"]);
+    const todo = p(marcarDocente(baseDocente(), "conducta", 10, 3));
+    expect(todo.escalas.oposicion.positivo).toBe(false);
+    expect(todo.alertas).not.toContain("oposicion");
+  });
+
+  it("ansiedad/depresión (29–35): 2 no, 3 sí", () => {
+    const dos = p(marcarDocente(baseDocente(), "ansiedad_depresion", 2, 2));
+    const tres = p(marcarDocente(baseDocente(), "ansiedad_depresion", 3, 2));
+    expect(dos.escalas.ansiedad_depresion.positivo).toBe(false);
+    expect(tres.escalas.ansiedad_depresion.positivo).toBe(true);
+  });
+
+  it("desempeño (36–43): basta 1 ítem con 4 o 5; con 3 no", () => {
+    expect(p(marcarDocente(baseDocente(), "desempeno", 8, 3)).escalas.desempeno.positivo).toBe(
+      false,
+    );
+    const r4 = baseDocente();
+    r4.T43 = 4;
+    expect(p(r4).escalas.desempeno.positivo).toBe(true);
+  });
+
+  it("nivel: alto con inatención + desempeño; moderado sin desempeño", () => {
+    const alto = marcarDocente(baseDocente(), "inatencion", 6, 3);
+    alto.T36 = 5;
+    expect(p(alto).nivel).toBe("alto");
+    expect(p(marcarDocente(baseDocente(), "hiperactividad", 9, 3)).nivel).toBe("moderado");
+  });
+
+  it("faltantes: 2 de 10 en conducta (20 %) se toleran; 3 (30 %) anulan la positividad", () => {
+    const r = marcarDocente(baseDocente(), "conducta", 3, 3);
+    delete r.T27;
+    delete r.T28;
+    expect(p(r).escalas.conducta.positivo).toBe(true);
+    delete r.T26;
+    expect(p(r).escalas.conducta.positivo).toBe(false);
+  });
+
+  it("rechaza ítems de padres y valores fuera de rango", () => {
+    expect(() => p({ V01: 1 })).toThrow(/no pertenece/);
+    expect(() => p({ T36: 0 })).toThrow(/fuera de rango/);
+    expect(() => p({ T01: 4 })).toThrow(/fuera de rango/);
+  });
+
+  it("las reglas de padres no cambian", () => {
+    const padres = puntuar({ instrumentoId: ID, respuestas: base() });
+    expect(padres.escalas.oposicion).toMatchObject({ umbral: 4, total: 8 });
+    expect(padres.escalas.conducta).toMatchObject({ umbral: 3, total: 14 });
+  });
+});

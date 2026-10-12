@@ -7,13 +7,21 @@
  * `REGLAS` (puntuar.ts).
  */
 import atento from "../../data/instrumento/atento-0.1.json";
+import vanderbiltDocente from "../../data/instrumento/vanderbilt-docente-es-1.0.json";
 import vanderbilt from "../../data/instrumento/vanderbilt-padres-es-1.0.json";
 import type { Instrumento, Item } from "./tipos";
 
 /** Instrumento que usa el sitio por defecto. */
 export const INSTRUMENTO_ACTUAL = "vanderbilt-padres-es-1.0";
 
-const INSTRUMENTOS: readonly Instrumento[] = [vanderbilt as Instrumento, atento as Instrumento];
+/** Instrumento de la versión docente (flujo /docente). */
+export const INSTRUMENTO_DOCENTE = "vanderbilt-docente-es-1.0";
+
+const INSTRUMENTOS: readonly Instrumento[] = [
+  vanderbilt as Instrumento,
+  atento as Instrumento,
+  vanderbiltDocente as Instrumento,
+];
 
 const POR_ID: ReadonlyMap<string, Instrumento> = new Map(INSTRUMENTOS.map((i) => [i.id, i]));
 
@@ -39,4 +47,19 @@ export function obtenerInstrumento(id: string): Instrumento {
 /** Índice itemId → Item de un instrumento. */
 export function indexarItems(instrumento: Instrumento): Map<string, Item> {
   return new Map(instrumento.items.map((item) => [item.id, item]));
+}
+
+/**
+ * Instrumentos cuyas respuestas NO entran en la publicación pública (/datos, /api/publico/*) ni
+ * en la versión "todas" de `agregados_municipio`: el informante docente describe al mismo niño que
+ * ya pudo contar su familia, así que sumarlo contaría dos veces al mismo niño. El panel admin sí
+ * las ve (filtrando por `version_instrumento`).
+ */
+export const INSTRUMENTOS_FUERA_DEL_MAPA: readonly string[] = INSTRUMENTOS.filter(
+  (i) => i.informante === "docente",
+).map((i) => i.id);
+
+/** Verdadero si las respuestas de ese instrumento cuentan en el mapa público. */
+export function cuentaEnMapa(versionInstrumento: string): boolean {
+  return !INSTRUMENTOS_FUERA_DEL_MAPA.includes(versionInstrumento);
 }

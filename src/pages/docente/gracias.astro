@@ -1,0 +1,280 @@
+---
+import Pasos from "@/components/Pasos.astro";
+import { icono, ilustracion, marca } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+import { TEXTO_NO_ES_RESULTADO } from "@/lib/cliente/hoja-docente";
+import { PASOS_DOCENTE } from "@/lib/cliente/pasos";
+import { INSTRUMENTO_DOCENTE, obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
+
+/**
+ * /docente/gracias — agradecimiento y hoja imprimible (window.print() + @media print).
+ * Resume SUS respuestas (conteos por escala e ítems de desempeño con 4–5). Nunca muestra nivel,
+ * umbrales ni interpretación.
+ */
+const instrumento = obtenerInstrumento(INSTRUMENTO_DOCENTE);
+---
+
+<Base
+  titulo="Gracias (docentes)"
+  descripcion="Gracias por responder la versión docente de Atento. Hoja con el resumen de sus respuestas para imprimir."
+  noindex
+  compacta
+>
+  <div class="flujo">
+    <Pasos actual={4} pasos={PASOS_DOCENTE} etiqueta="Pasos de la versión docente" />
+    <article class="contenedor flujo__cuerpo gracias" id="gracias">
+      <section id="sin-hoja" hidden aria-labelledby="sin-titulo" class="sin-hoja">
+        <div class="sin-hoja__ilus" set:html={ilustracion("vacio", { decorativo: true, clase: "ilustracion" })} />
+        <h1 id="sin-titulo">No hay una hoja en este dispositivo</h1>
+        <p class="grande">La hoja se guarda solo en el teléfono o computadora donde se respondió el cuestionario.</p>
+        <p><a href="/docente" class="boton boton--primario boton--grande">Ir a la versión para docentes</a></p>
+      </section>
+
+      <div id="con-hoja" hidden>
+        <div class="gracias__cabecera no-imprimir">
+          <div class="gracias__ilus" set:html={ilustracion("gracias", { decorativo: true, clase: "ilustracion" })} />
+          <div>
+            <h1>Gracias por su tiempo</h1>
+            <p class="grande">
+              Abajo está la hoja con el resumen de sus respuestas. Imprímala o guárdela en PDF y
+              entréguela a la familia o al profesional de salud.
+            </p>
+            <p class="estado-guardado" id="estado-guardado" hidden role="status"></p>
+          </div>
+        </div>
+
+        <section class="hoja" aria-labelledby="hoja-titulo">
+          <header class="hoja__cabecera">
+            <Fragment set:html={marca("logo", { titulo: "Atento", clase: "hoja__logo" })} />
+            <p class="hoja__sub">Cribado comunitario de TDAH · versión para docentes</p>
+          </header>
+          <h2 id="hoja-titulo" class="hoja__titulo">Resumen de las respuestas del docente</h2>
+          <p class="hoja__aviso"><strong>{TEXTO_NO_ES_RESULTADO}</strong></p>
+          <dl class="hoja__datos">
+            <div><dt>Fecha</dt><dd id="hoja-fecha"></dd></div>
+            <div><dt>Edad del niño o niña</dt><dd id="hoja-edad"></dd></div>
+            <div><dt>Código de vínculo</dt><dd id="hoja-codigo" class="tabular"></dd></div>
+            <div><dt>Cuestionario</dt><dd>{instrumento.nombre}, versión {instrumento.version}</dd></div>
+          </dl>
+
+          <h3>Frases marcadas «seguido» o «muy seguido»</h3>
+          <table class="hoja__tabla">
+            <thead>
+              <tr><th scope="col">Área</th><th scope="col">Marcadas</th></tr>
+            </thead>
+            <tbody id="hoja-escalas"></tbody>
+          </table>
+
+          <h3>Desempeño con «cierta dificultad» o «con dificultad»</h3>
+          <ul class="hoja__lista" id="hoja-desempeno"></ul>
+
+          <p class="hoja__pie suave">
+            Escala NICHQ Vanderbilt para docentes (1.ª edición, 2002; versión en español),
+            © American Academy of Pediatrics y NICHQ. Atento: atento.galexbh.dev.
+          </p>
+        </section>
+
+        <section class="acciones no-imprimir" aria-label="Acciones">
+          <button type="button" class="boton boton--primario boton--grande" id="imprimir">
+            <Fragment set:html={icono("descargar")} />
+            Imprimir o guardar PDF
+          </button>
+          <a href="/docente" class="boton boton--texto">Responder por otro niño o niña</a>
+          <button type="button" class="boton boton--texto" data-borrar-datos>Borrar mis datos de este dispositivo</button>
+        </section>
+      </div>
+    </article>
+  </div>
+</Base>
+
+<script>
+  import { iniciarBorrarDatos } from "@/lib/cliente/almacen";
+  import { iniciarHojaDocente } from "@/lib/cliente/docente";
+  iniciarHojaDocente(document.getElementById("gracias") as HTMLElement);
+  iniciarBorrarDatos();
+</script>
+
+<style>
+  [hidden] {
+    display: none !important;
+  }
+  .sin-hoja {
+    text-align: center;
+    padding-block: var(--espacio-4);
+  }
+  .sin-hoja__ilus {
+    max-width: 16rem;
+    margin: 0 auto var(--espacio-4);
+  }
+  .sin-hoja p {
+    margin-inline: auto;
+  }
+  .gracias__cabecera {
+    display: grid;
+    gap: var(--espacio-3);
+    align-items: center;
+    margin-bottom: var(--espacio-4);
+  }
+  .gracias__ilus {
+    max-width: 12rem;
+  }
+  .estado-guardado {
+    padding: var(--espacio-2) var(--espacio-3);
+    border-radius: var(--radio);
+    background: var(--color-superficie-2);
+    font-size: 0.95rem;
+  }
+  .hoja {
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    padding: var(--espacio-4);
+  }
+  .hoja__cabecera {
+    border-bottom: 2px solid var(--color-primario);
+    padding-bottom: var(--espacio-3);
+    margin-bottom: var(--espacio-3);
+  }
+  .hoja__cabecera :global(.hoja__logo) {
+    width: 9rem;
+    height: auto;
+    display: block;
+  }
+  .hoja__sub {
+    margin: var(--espacio-1, 0.25rem) 0 0;
+    color: var(--color-primario-fuerte);
+    font-weight: 700;
+  }
+  .hoja__titulo {
+    font-size: 1.35rem;
+    margin-top: 0;
+  }
+  .hoja__aviso {
+    padding: var(--espacio-2) var(--espacio-3);
+    border-left: 4px solid var(--color-acento-texto, var(--color-primario));
+    background: var(--color-superficie-2);
+    border-radius: var(--radio);
+  }
+  .hoja__datos {
+    display: grid;
+    gap: var(--espacio-2) var(--espacio-4);
+    margin: var(--espacio-3) 0;
+  }
+  .hoja__datos dt {
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-texto-suave);
+  }
+  .hoja__datos dd {
+    margin: 0;
+  }
+  .hoja h3 {
+    font-size: 1.1rem;
+    margin-top: var(--espacio-4);
+  }
+  .hoja__tabla {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .hoja__tabla th,
+  .hoja__tabla :global(th),
+  .hoja__tabla :global(td) {
+    text-align: left;
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--color-borde);
+  }
+  .hoja__tabla :global(td) {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .hoja__tabla :global(.hoja__rango) {
+    display: block;
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--color-texto-suave);
+  }
+  .hoja__lista {
+    padding-left: 1.2rem;
+  }
+  .hoja__lista :global(.hoja__num) {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-texto-suave);
+  }
+  .hoja__pie {
+    margin-top: var(--espacio-4);
+    font-size: 0.85rem;
+  }
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-3);
+    margin-top: var(--espacio-4);
+    align-items: center;
+  }
+  @media (min-width: 40rem) {
+    .gracias__cabecera {
+      grid-template-columns: 10rem 1fr;
+      gap: var(--espacio-4);
+    }
+    .hoja__datos {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 30rem) {
+    .acciones .boton--grande {
+      width: 100%;
+    }
+  }
+
+  /* Impresión: solo la hoja, en blanco y negro legible. */
+  @media print {
+    @page {
+      margin: 16mm;
+    }
+    .gracias {
+      padding: 0;
+      max-width: none;
+    }
+    .hoja {
+      border: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+    }
+    .hoja__cabecera {
+      border-bottom-color: #1f6f8b;
+      break-inside: avoid;
+    }
+    .hoja__cabecera :global(.hoja__logo) {
+      width: 55mm;
+    }
+    .hoja__sub {
+      color: #1f6f8b;
+    }
+    .hoja__aviso {
+      background: #fff;
+      border: 1px solid #000;
+      border-left-width: 4px;
+    }
+    .hoja__datos {
+      grid-template-columns: 1fr 1fr;
+      font-size: 10.5pt;
+    }
+    .hoja__datos dt,
+    .hoja__tabla :global(.hoja__rango),
+    .hoja__lista :global(.hoja__num),
+    .hoja__pie {
+      color: #333;
+    }
+    .hoja__tabla,
+    .hoja__lista {
+      break-inside: avoid;
+    }
+    .hoja__tabla :global(th),
+    .hoja__tabla :global(td) {
+      border-bottom-color: #999;
+    }
+  }
+</style>

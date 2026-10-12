@@ -13,6 +13,7 @@ const PAGINAS_PUBLICAS = [
   "/",
   "/metodologia",
   "/datos",
+  "/docente",
   "/contacto",
   "/legal/terminos",
   "/legal/privacidad",
@@ -27,6 +28,10 @@ const PAGINAS_NOINDEX = [
   "/cribado/consentimiento",
   "/cribado/datos",
   "/cribado/cuestionario",
+  "/docente/consentimiento",
+  "/docente/datos",
+  "/docente/cuestionario",
+  "/docente/gracias",
   "/offline",
 ];
 
@@ -44,7 +49,7 @@ test.describe("SEO", () => {
     const texto = await r.text();
     expect(texto).toContain("User-agent: *");
     expect(texto).toContain("Allow: /");
-    for (const ruta of ["/api/", "/admin/", "/resultado", "/cribado/"]) {
+    for (const ruta of ["/api/", "/admin/", "/resultado", "/cribado/", "/docente/"]) {
       expect(texto).toContain(`Disallow: ${ruta}`);
     }
     expect(texto).toContain(`Sitemap: ${SITIO}/sitemap-index.xml`);
@@ -67,6 +72,7 @@ test.describe("SEO", () => {
       expect(url, "URL excluida presente").not.toMatch(
         /\/(resultado|cribado|admin|api|offline)(\/|$)/,
       );
+      expect(url, "flujo docente presente").not.toMatch(/\/docente\/./);
       expect(url.startsWith(`${SITIO}/`)).toBe(true);
       if (url !== `${SITIO}/`) expect(url.endsWith("/")).toBe(false);
     }

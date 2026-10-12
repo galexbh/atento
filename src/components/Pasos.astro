@@ -1,12 +1,22 @@
 ---
 import { marca } from "@/components/svg";
 
-/** Barra superior del flujo de cribado: marca y los 4 pasos como una sola línea. */
+/**
+ * Barra superior de un flujo (cribado de la familia o versión docente): marca y los 4 pasos
+ * como una sola línea.
+ */
 interface Props {
   actual: 1 | 2 | 3 | 4;
+  /** Nombres de los pasos (por defecto, los del cribado de la familia). */
+  pasos?: string[];
+  /** Nombre accesible de la lista de pasos. */
+  etiqueta?: string;
 }
-const { actual } = Astro.props;
-const pasos = ["Consentimiento", "Datos", "Cuestionario", "Resultado"];
+const {
+  actual,
+  pasos = ["Consentimiento", "Datos", "Cuestionario", "Resultado"],
+  etiqueta = "Pasos del cribado",
+} = Astro.props;
 ---
 
 <header class="pasos-flujo no-imprimir">
@@ -15,7 +25,7 @@ const pasos = ["Consentimiento", "Datos", "Cuestionario", "Resultado"];
       <Fragment set:html={marca("simbolo", { decorativo: true, clase: "pasos-flujo__simbolo" })} />
       <span>Atento</span>
     </a>
-    <ol class="pasos-flujo__lista" aria-label="Pasos del cribado">
+    <ol class="pasos-flujo__lista" aria-label={etiqueta}>
       {
         pasos.map((p, i) => {
           const n = i + 1;

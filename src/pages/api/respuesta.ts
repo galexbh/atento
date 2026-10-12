@@ -4,6 +4,7 @@ import { error, formatearErrores, ipDelCliente, json, registrar } from "@/lib/ap
 import { consumirIntento, faltaSal } from "@/lib/api/limite-tasa";
 import { verificarTurnstile } from "@/lib/api/turnstile";
 import { construirFila, insertarRespuesta } from "@/lib/db/respuestas";
+import { obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
 import { EsquemaEnvio } from "@/lib/validacion/respuesta";
 
 export const prerender = false;
@@ -27,6 +28,11 @@ export const MAX_BYTES = 32 * 1024;
  *  200 id ya guardado: `{ok:true, duplicado:true}` (reintentos idempotentes)
  *  403 Turnstile inválido
  *  201 `{ok:true, nivel}`; 503 `{ok:false, motivo:"no_guardado"}` si D1 falla
+ *
+ * Sirve a los dos flujos: familia (Vanderbilt padres + ítems Atento) y docente (Vanderbilt
+ * docente, `informante: "docente"`, código de vínculo opcional). Para el instrumento docente el
+ * servidor puntúa y guarda `nivel`/`pos_*` igual (para investigación), pero responde 201
+ * `{ok:true}` SIN `nivel`: al docente no se le muestra ningún nivel ni interpretación.
  */
 export const POST: APIRoute = async ({ request }) => {
   const inicio = Date.now();
@@ -113,6 +119,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (resultado === "duplicada") return responder(json({ ok: true, duplicado: true }, 200));
   } catch {
     return responder(error(503, "no_guardado"), "respuesta_d1");
+  }
+  if (obtenerInstrumento(envio.instrumentoId).informante === "docente") {
+    return responder(json({ ok: true }, 201), "respuesta_docente");
   }
   return responder(json({ ok: true, nivel: fila.nivel }, 201));
 };

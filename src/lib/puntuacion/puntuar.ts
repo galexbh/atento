@@ -10,6 +10,12 @@
  * - Ansiedad/depresión: ≥ 3 de 7.
  * - Desempeño positivo: ≥ 1 ítem de desempeño con valor 4 o 5.
  *
+ * Reglas de Vanderbilt (informante docente, 1ª ed., guía de puntuación de NICHQ):
+ * - Inatención ≥ 6 de 9 (ítems 1–9); hiperactividad/impulsividad ≥ 6 de 9 (10–18).
+ * - Oposición desafiante/conducta (escala combinada, ítems 19–28): ≥ 3 de 10. En Atento se guarda
+ *   en la escala `conducta`; `oposicion` no tiene ítems y nunca es positiva.
+ * - Ansiedad/depresión ≥ 3 de 7 (29–35). Desempeño ≥ 1 ítem con 4 o 5 (36–43).
+ *
  * Los umbrales se leen de `REGLAS[instrumentoId]` para poder añadir otros
  * instrumentos sin tocar el algoritmo.
  *
@@ -66,10 +72,21 @@ const REGLAS_VANDERBILT: ReglasInstrumento = {
   maxProporcionFaltantes: 0.2,
 };
 
+/**
+ * Vanderbilt docente 1ª ed.: mismos cortes salvo `conducta`, que aquí es la escala combinada de
+ * oposición/conducta (≥ 3 de 10). `oposicion` conserva un umbral nominal, pero al no tener ítems
+ * (total 0) nunca puede ser positiva.
+ */
+const REGLAS_VANDERBILT_DOCENTE: ReglasInstrumento = {
+  ...REGLAS_VANDERBILT,
+  umbrales: { ...REGLAS_VANDERBILT.umbrales, conducta: 3 },
+};
+
 /** Reglas por instrumento. Atento 0.1 copia provisionalmente las de Vanderbilt. */
 export const REGLAS: Record<string, ReglasInstrumento> = {
   "vanderbilt-padres-es-1.0": REGLAS_VANDERBILT,
   "atento-0.1": { ...REGLAS_VANDERBILT, umbrales: { ...REGLAS_VANDERBILT.umbrales } },
+  "vanderbilt-docente-es-1.0": REGLAS_VANDERBILT_DOCENTE,
 };
 
 /** Rango válido de valores por tipo de ítem. */

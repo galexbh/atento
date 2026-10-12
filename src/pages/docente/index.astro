@@ -1,0 +1,262 @@
+---
+import { icono, ilustracion } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+
+/**
+ * /docente — presentación de la versión docente (indexable).
+ *
+ * La familia comparte `/docente?codigo=XXXXXXXX` desde su resultado. El script normaliza el
+ * código, lo guarda en `atento:docente:codigo` y lo quita de la barra de direcciones. Sin
+ * JavaScript la página se lee entera y el botón lleva igual al consentimiento.
+ */
+const puntos = [
+  {
+    icono: "tiempo",
+    titulo: "De 5 a 8 minutos",
+    texto: "43 preguntas cortas sobre lo que observa en clase desde el inicio del año escolar.",
+  },
+  {
+    icono: "privacidad",
+    titulo: "Sin nombres",
+    texto:
+      "No pedimos el nombre del niño o niña, ni el suyo, ni el de la escuela. Solo el departamento y el municipio de la escuela, la edad y el sexo.",
+  },
+  {
+    icono: "descargar",
+    titulo: "Una hoja para la familia",
+    texto:
+      "Al terminar verá una hoja con el resumen de sus respuestas para imprimir o guardar en PDF y entregar a la familia o al profesional de salud.",
+  },
+];
+---
+
+<Base
+  titulo="Versión para docentes"
+  descripcion="Cuestionario para docentes sobre atención y conducta en clase de niños de 6 a 12 años. Cribado, no diagnóstico. De 5 a 8 minutos, sin nombres."
+>
+  <section class="contenedor contenedor--ancho docente-hero" aria-labelledby="docente-titulo">
+    <div class="docente-hero__ilus" set:html={ilustracion("docente", { decorativo: true, clase: "ilustracion" })} />
+    <div>
+      <p class="docente-hero__antetitulo">Atento · versión para docentes</p>
+      <h1 id="docente-titulo">Su mirada desde el aula también cuenta</h1>
+      <p class="grande">
+        Si una familia le pidió responder sobre un niño o niña de su clase, este cuestionario
+        ordena lo que usted observa en la escuela. Es un <strong>cribado</strong>, no un
+        diagnóstico.
+      </p>
+      <p class="codigo-recibido" id="codigo-recibido" hidden role="status"></p>
+      <div class="docente-hero__acciones">
+        <a href="/docente/consentimiento" class="boton boton--primario boton--grande" id="empezar">
+          Empezar el cuestionario
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg>
+        </a>
+        <span class="docente-hero__tiempo">
+          <Fragment set:html={icono("tiempo")} />
+          De 5 a 8 minutos
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion banda--suave" aria-labelledby="por-que">
+    <div class="contenedor contenedor--ancho dos-columnas">
+      <div>
+        <h2 id="por-que">Por qué importa lo que usted ve</h2>
+        <p>
+          Para pensar en TDAH, las señales tienen que aparecer en <strong>más de un entorno</strong>,
+          por ejemplo en la casa y en la escuela. La familia ve una parte; usted ve otra: cómo
+          trabaja en clase, cómo sigue instrucciones, cómo se lleva con sus compañeros.
+        </p>
+        <p>
+          Sus respuestas no sustituyen las de la familia ni la evaluación de un profesional de
+          salud: las complementan. Las preguntas son las de la escala NICHQ Vanderbilt para
+          docentes, la misma que usan pediatras en muchos países.
+        </p>
+      </div>
+      <ul class="puntos">
+        {
+          puntos.map((p) => (
+            <li class="punto">
+              <span class="punto__icono" set:html={icono(p.icono)} />
+              <div>
+                <h3>{p.titulo}</h3>
+                <p>{p.texto}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="seccion" aria-labelledby="codigo-titulo">
+    <div class="contenedor">
+      <h2 id="codigo-titulo">El código de vínculo</h2>
+      <p>
+        La familia puede enviarle un enlace con un <strong>código de 8 caracteres</strong>. Sirve
+        solo para que, en la investigación anónima, se puedan comparar sus respuestas con las de la
+        familia. Si no tiene código, puede responder igual; en ese caso sus respuestas no se podrán
+        comparar con las de la familia.
+      </p>
+      <p>
+        Nadie puede ver las respuestas del otro con ese código: ni la familia ve las suyas ni usted
+        ve las de la familia. Atento no tiene ninguna forma de consultarlas por código.
+      </p>
+      <h2>Qué no verá</h2>
+      <p>
+        Al terminar <strong>no verá un nivel ni un resultado</strong>, solo el resumen de lo que
+        marcó. La interpretación corresponde a la familia junto con un profesional de salud.
+      </p>
+      <h2>Privacidad</h2>
+      <p>
+        Sus respuestas se guardan, de forma anónima, solo si usted lo autoriza en el siguiente paso.
+        Las respuestas de docentes no se suman al mapa público, para no contar dos veces al mismo
+        niño. Más detalle en la <a href="/legal/privacidad">política de privacidad</a> y en la{" "}
+        <a href="/metodologia">metodología</a>.
+      </p>
+      <p>
+        <a href="/docente/consentimiento" class="boton boton--primario boton--grande">Empezar el cuestionario</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="contenedor aviso-salud" aria-label="Aviso de salud">
+    <p>
+      <strong>Aviso de salud.</strong> Atento es un cribado comunitario, no un diagnóstico ni un
+      servicio de urgencia. Si un niño o niña está en peligro o hay una emergencia, llame al{" "}
+      <strong>911</strong>. <a href="/legal/aviso-de-salud">Leer el aviso completo</a>.
+    </p>
+  </section>
+</Base>
+
+<script>
+  import { leerCodigoVinculo, formatearCodigo } from "@/lib/compartido/codigo-vinculo";
+  import { almacenDocente } from "@/lib/cliente/almacen";
+
+  const url = new URL(window.location.href);
+  const bruto = url.searchParams.get("codigo");
+  const aviso = document.getElementById("codigo-recibido") as HTMLElement;
+  if (bruto !== null) {
+    const codigo = leerCodigoVinculo(bruto);
+    aviso.hidden = false;
+    if (codigo) {
+      almacenDocente.guardarCodigo(codigo);
+      aviso.textContent = `Código de vínculo recibido: ${formatearCodigo(codigo)}. Ya quedó guardado en este dispositivo.`;
+    } else {
+      aviso.textContent =
+        "El código del enlace no parece válido (deben ser 8 letras o números). Podrá escribirlo en el paso de datos.";
+    }
+    // El código no debe quedar en el historial ni en capturas de pantalla.
+    url.searchParams.delete("codigo");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  } else {
+    const guardado = almacenDocente.leerCodigo();
+    if (guardado) {
+      aviso.hidden = false;
+      aviso.textContent = `Código de vínculo guardado en este dispositivo: ${formatearCodigo(guardado)}.`;
+    }
+  }
+  document.body.dataset.listo = "1";
+</script>
+
+<style>
+  .docente-hero {
+    display: grid;
+    gap: var(--espacio-4);
+    padding-block: var(--espacio-5);
+    align-items: center;
+  }
+  .docente-hero__ilus {
+    max-width: 18rem;
+  }
+  .docente-hero__antetitulo {
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-primario-fuerte);
+    margin-bottom: var(--espacio-2);
+  }
+  .docente-hero h1 {
+    font-size: clamp(1.8rem, 1.3rem + 2vw, 2.75rem);
+  }
+  .docente-hero__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--espacio-3);
+    margin-top: var(--espacio-4);
+  }
+  .docente-hero__tiempo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    color: var(--color-texto-suave);
+  }
+  .docente-hero__tiempo :global(svg) {
+    width: 1.3em;
+    height: 1.3em;
+  }
+  .codigo-recibido {
+    padding: var(--espacio-2) var(--espacio-3);
+    border-radius: var(--radio);
+    background: var(--color-superficie-2);
+    font-weight: 600;
+  }
+  .codigo-recibido[hidden] {
+    display: none;
+  }
+  .dos-columnas {
+    display: grid;
+    gap: var(--espacio-4);
+  }
+  .puntos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--espacio-3);
+  }
+  .punto {
+    display: grid;
+    grid-template-columns: 2.75rem 1fr;
+    gap: var(--espacio-3);
+    align-items: start;
+    margin: 0;
+  }
+  .punto__icono {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: var(--color-superficie);
+    color: var(--color-primario);
+  }
+  .punto__icono :global(svg) {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  .punto h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+  }
+  .punto p {
+    margin: 0;
+  }
+  .aviso-salud {
+    padding-block: var(--espacio-4);
+    font-size: 0.95rem;
+    color: var(--color-texto-suave);
+  }
+  @media (min-width: 48rem) {
+    .docente-hero {
+      grid-template-columns: 1fr 2fr;
+    }
+    .dos-columnas {
+      grid-template-columns: 1.2fr 1fr;
+      gap: var(--espacio-5);
+    }
+  }
+</style>

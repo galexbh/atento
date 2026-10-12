@@ -6,9 +6,12 @@
  * - Municipios ponderados por población aproximada de cada departamento (cabecera con más peso).
  * - ~8 % de cribados positivos (inatención y/o hiperactividad) con comorbilidad plausible
  *   (oposición/conducta más frecuentes en el grupo hiperactivo; desempeño afectado en positivos).
- * - Edades 6–12 (más 7–10), sexo F/M (~1 % X), informante madre 60 % / padre 20 % / cuidador 10 %
- *   / docente 10 %, consentimiento de investigación 70 %, fechas repartidas en los últimos 12 meses,
- *   ~3 % incompletos, versión `vanderbilt-padres-es-1.0`.
+ * - Edades 6–12 (más 7–10), sexo F/M (~1 % X), informante madre 66 % / padre 22 % / cuidador 12 %
+ *   (los docentes usan su propio instrumento), consentimiento de investigación 70 %, fechas
+ *   repartidas en los últimos 12 meses, ~3 % incompletos, versión `vanderbilt-padres-es-1.0`.
+ * - Versión docente: ~15 % de las familias completas con consentimiento comparten su código de
+ *   vínculo y el docente responde `vanderbilt-docente-es-1.0` (mismo perfil latente, con ruido),
+ *   para probar el reporte de concordancia. Estas filas se suman a las N de familias.
  * - Determinista: misma semilla -> mismos ids (UUID v4 derivados del PRNG) -> `INSERT OR IGNORE`
  *   hace que repetir el comando sea idempotente.
  *
@@ -24,7 +27,11 @@ import {
   construirFila,
   type FilaRespuestaNueva,
 } from "../src/lib/db/respuestas";
-import { INSTRUMENTO_ACTUAL, obtenerInstrumento } from "../src/lib/puntuacion/instrumentos";
+import {
+  INSTRUMENTO_ACTUAL,
+  INSTRUMENTO_DOCENTE,
+  obtenerInstrumento,
+} from "../src/lib/puntuacion/instrumentos";
 import type { Envio } from "../src/lib/validacion/respuesta";
 
 // ---------- argumentos ----------
@@ -126,8 +133,9 @@ function valorDesempeno(afectado: boolean): number {
 }
 
 const instrumento = obtenerInstrumento(INSTRUMENTO_ACTUAL);
+const instrumentoDocente = obtenerInstrumento(INSTRUMENTO_DOCENTE);
 
-function generarRespuestas(perfil: Perfil): Record<string, number> {
+function generarRespuestas(perfil: Perfil, inst = instrumento): Record<string, number> {
   const ina = perfil === "inatencion" || perfil === "ambas";
   const hip = perfil === "hiperactividad" || perfil === "ambas";
   const desempenoAfectado = (ina || hip) && rnd() < 0.55;
@@ -136,7 +144,7 @@ function generarRespuestas(perfil: Perfil): Record<string, number> {
   const conducta = hip ? rnd() < 0.2 : rnd() < 0.02;
   const ansiedad = ina ? rnd() < 0.3 : rnd() < 0.08;
   const r: Record<string, number> = {};
-  for (const item of instrumento.items) {
+  for (const item of inst.items) {
     if (item.tipo === "desempeno") {
       r[item.id] = valorDesempeno(desempenoAfectado);
       continue;
@@ -176,7 +184,7 @@ function fechaAleatoria(): Date {
 }
 
 // ---------- generación ----------
-function generarFila(): FilaRespuestaNueva {
+function generarFila(): FilaRespuestaNueva[] {
   const perfil = elegirPonderado(PERFILES, PESOS_PERFIL);
   const geo = elegirMunicipio();
   const completado = rnd() >= 0.03;
@@ -198,10 +206,7 @@ function generarFila(): FilaRespuestaNueva {
     municipio: geo.municipio,
     edadAnios: elegirPonderado([6, 7, 8, 9, 10, 11, 12], [10, 17, 18, 18, 16, 12, 9]),
     sexo: elegirPonderado(["F", "M", "X"] as const, [49, 50, 1]),
-    informante: elegirPonderado(
-      ["madre", "padre", "cuidador", "docente"] as const,
-      [60, 20, 10, 10],
-    ),
+    informante: elegirPonderado(["madre", "padre", "cuidador"] as const, [66, 22, 12]),
     consentimientoInvestigacion: rnd() < 0.7,
     versionConsentimiento: "2026-10-11",
     duracionSegundos: Math.round(240 + rnd() * 600 + rnd() * 300),
@@ -210,11 +215,34 @@ function generarFila(): FilaRespuestaNueva {
     hp: "",
   };
   if (itemAbandono) envio.itemAbandono = itemAbandono;
-  return construirFila(envio, fechaAleatoria());
+  const fecha = fechaAleatoria();
+  const familia = construirFila(envio, fecha);
+  if (!completado || !envio.consentimientoInvestigacion || rnd() >= 0.15) return [familia];
+  // La familia invita al docente: mismo niño, mismo código; el docente ve a veces otro perfil.
+  const codigo = Array.from({ length: 8 }, () =>
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".charAt(Math.floor(rnd() * 32)),
+  ).join("");
+  familia.codigo_vinculo = codigo;
+  const perfilDocente = rnd() < 0.7 ? perfil : elegirPonderado(PERFILES, PESOS_PERFIL);
+  const geoEscuela = rnd() < 0.85 ? geo : elegirMunicipio();
+  const docente: Envio = {
+    ...envio,
+    id: uuidV4(),
+    instrumentoId: INSTRUMENTO_DOCENTE,
+    respuestas: generarRespuestas(perfilDocente, instrumentoDocente),
+    departamento: geoEscuela.departamento,
+    municipio: geoEscuela.municipio,
+    informante: "docente",
+    versionConsentimiento: "2026-10-12",
+    duracionSegundos: Math.round(180 + rnd() * 300),
+    codigoVinculo: codigo,
+  };
+  const despues = new Date(fecha.getTime() + Math.floor(rnd() * 20) * 86_400_000);
+  return [familia, construirFila(docente, despues > HOY ? HOY : despues)];
 }
 
 const filas: FilaRespuestaNueva[] = [];
-for (let i = 0; i < N; i++) filas.push(generarFila());
+for (let i = 0; i < N; i++) filas.push(...generarFila());
 
 const columnas = COLUMNAS_RESPUESTA.join(", ");
 const sentencias: string[] = [];
@@ -236,7 +264,7 @@ const positivos = filas.filter((f) => f.pos_inatencion === 1 || f.pos_hiperactiv
 const porNivel = { bajo: 0, moderado: 0, alto: 0 };
 for (const f of filas) porNivel[f.nivel] += 1;
 console.log(
-  `Generadas ${filas.length} respuestas en ${ARCHIVO}: ${positivos} con indicadores (${((100 * positivos) / filas.length).toFixed(1)} %), niveles ${JSON.stringify(porNivel)}, ${filas.filter((f) => f.completado === 0).length} incompletas.`,
+  `Generadas ${filas.length} respuestas (${filas.filter((f) => f.informante === "docente").length} de docentes) en ${ARCHIVO}: ${positivos} con indicadores (${((100 * positivos) / filas.length).toFixed(1)} %), niveles ${JSON.stringify(porNivel)}, ${filas.filter((f) => f.completado === 0).length} incompletas.`,
 );
 
 if (!SOLO_SQL) {

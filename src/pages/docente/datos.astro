@@ -1,0 +1,213 @@
+---
+import Pasos from "@/components/Pasos.astro";
+import Base from "@/layouts/Base.astro";
+import { listarDepartamentos, listarTodosLosMunicipios } from "@/lib/catalogo/geo";
+import { PASOS_DOCENTE } from "@/lib/cliente/pasos";
+
+/**
+ * Datos mínimos del flujo docente: departamento y municipio de la ESCUELA, edad (6–12) y sexo
+ * del niño o niña y código de vínculo opcional. `informante` siempre es "docente" (no se pregunta).
+ */
+const departamentos = listarDepartamentos();
+const municipios = listarTodosLosMunicipios().map((m) => [m.codigo, m.nombre]);
+const edades = [6, 7, 8, 9, 10, 11, 12];
+---
+
+<Base
+  titulo="Datos del niño o niña (docentes)"
+  descripcion="Departamento y municipio de la escuela, edad y sexo del niño o niña y código de vínculo opcional. Sin nombres."
+  noindex
+  compacta
+>
+  <div class="flujo">
+    <Pasos actual={2} pasos={PASOS_DOCENTE} etiqueta="Pasos de la versión docente" />
+    <div class="contenedor flujo__cuerpo">
+      <form id="datos" novalidate>
+        <h1>Sobre el niño o la niña</h1>
+        <p class="grande">Solo lo necesario para la investigación anónima. Nada que identifique a nadie.</p>
+
+        <div class="campo">
+          <label for="departamento">¿En qué departamento está la escuela?</label>
+          <select id="departamento" name="departamento" class="selector" required>
+            <option value="">Elige un departamento</option>
+            {departamentos.map((d) => <option value={d.codigo}>{d.nombre}</option>)}
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="municipio">¿En qué municipio está la escuela?</label>
+          <select id="municipio" name="municipio" class="selector" required disabled aria-describedby="ayuda-municipio">
+            <option value="">Primero elige el departamento</option>
+          </select>
+          <span class="ayuda" id="ayuda-municipio">Solo se usa en estadísticas agrupadas, nunca el nombre de la escuela.</span>
+        </div>
+
+        <fieldset class="campo">
+          <legend>¿Cuántos años tiene el niño o la niña?</legend>
+          <div class="opciones opciones--fila" aria-describedby="ayuda-edad">
+            {
+              edades.map((e) => (
+                <label class="opcion opcion--centrada">
+                  <input type="radio" name="edadAnios" value={e} required />
+                  <span>{e}</span>
+                </label>
+              ))
+            }
+          </div>
+          <span class="ayuda" id="ayuda-edad">Años cumplidos. El cuestionario es para niñas y niños de 6 a 12 años.</span>
+        </fieldset>
+
+        <fieldset class="campo">
+          <legend>Sexo</legend>
+          <div class="opciones opciones--fila">
+            <label class="opcion opcion--centrada"><input type="radio" name="sexo" value="F" required /><span>Niña</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="sexo" value="M" /><span>Niño</span></label>
+            <label class="opcion opcion--centrada"><input type="radio" name="sexo" value="X" /><span>Prefiero no decir</span></label>
+          </div>
+        </fieldset>
+
+        <div class="campo">
+          <label for="codigo">Código de vínculo <span class="opcional">(opcional, recomendado)</span></label>
+          <input
+            id="codigo"
+            name="codigo"
+            class="entrada entrada--codigo tabular"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="12"
+            placeholder="XXXX-XXXX"
+            aria-describedby="ayuda-codigo"
+          />
+          <span class="ayuda" id="ayuda-codigo">
+            Son 8 letras o números que la familia le envió. Sin código puede responder igual, pero
+            sus respuestas no se podrán comparar con las de la familia.
+          </span>
+        </div>
+
+        <p class="flujo__ayuda" id="ayuda-datos" role="alert"></p>
+        <div class="flujo__acciones">
+          <a href="/docente/consentimiento" class="boton boton--texto">Atrás</a>
+          <button type="submit" class="boton boton--primario boton--grande">Continuar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</Base>
+
+<script is:inline type="application/json" id="catalogo-municipios" set:html={JSON.stringify(municipios)} />
+
+<script>
+  import { almacenDocente, type DatosDocente } from "@/lib/cliente/almacen";
+  import {
+    formatearCodigo,
+    leerCodigoVinculo,
+    normalizarCodigoVinculo,
+  } from "@/lib/compartido/codigo-vinculo";
+
+  const municipios = JSON.parse(
+    (document.getElementById("catalogo-municipios") as HTMLElement).textContent ?? "[]",
+  ) as [string, string][];
+
+  const form = document.getElementById("datos") as HTMLFormElement;
+  const depto = document.getElementById("departamento") as unknown as HTMLSelectElement;
+  const muni = document.getElementById("municipio") as unknown as HTMLSelectElement;
+  const codigo = document.getElementById("codigo") as HTMLInputElement;
+  const ayuda = document.getElementById("ayuda-datos") as HTMLElement;
+
+  if (!almacenDocente.leerConsentimiento()) {
+    window.location.replace("/docente/consentimiento");
+  }
+
+  function llenarMunicipios(codDepto: string, seleccionado?: string): void {
+    muni.innerHTML = "";
+    const lista = municipios.filter(([c]) => c.startsWith(codDepto));
+    const vacia = document.createElement("option");
+    vacia.value = "";
+    vacia.textContent = lista.length ? "Elige un municipio" : "Primero elige el departamento";
+    muni.appendChild(vacia);
+    for (const [c, nombre] of lista) {
+      const op = document.createElement("option");
+      op.value = c;
+      op.textContent = nombre;
+      if (c === seleccionado) op.selected = true;
+      muni.appendChild(op);
+    }
+    muni.disabled = lista.length === 0;
+  }
+
+  depto.addEventListener("change", () => llenarMunicipios(depto.value));
+  if (depto.value) llenarMunicipios(depto.value);
+
+  // Restaura datos previos y el código: ?codigo= en esta URL > el guardado en /docente > el previo.
+  const previos = almacenDocente.leerDatos();
+  if (previos) {
+    depto.value = previos.departamento;
+    llenarMunicipios(previos.departamento, previos.municipio);
+    for (const [nombre, valor] of [
+      ["edadAnios", String(previos.edadAnios)],
+      ["sexo", previos.sexo],
+    ]) {
+      const radio = form.querySelector<HTMLInputElement>(`input[name="${nombre}"][value="${valor}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+  const deUrl = leerCodigoVinculo(new URL(window.location.href).searchParams.get("codigo"));
+  const inicial = deUrl ?? almacenDocente.leerCodigo() ?? previos?.codigoVinculo ?? null;
+  if (inicial) codigo.value = formatearCodigo(inicial);
+
+  function valorRadio(nombre: string): string {
+    return form.querySelector<HTMLInputElement>(`input[name="${nombre}"]:checked`)?.value ?? "";
+  }
+
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const textoCodigo = normalizarCodigoVinculo(codigo.value);
+    const codigoVinculo = textoCodigo === "" ? null : leerCodigoVinculo(textoCodigo);
+    const faltan: string[] = [];
+    if (!depto.value) faltan.push("el departamento");
+    if (!muni.value) faltan.push("el municipio");
+    if (!valorRadio("edadAnios")) faltan.push("la edad");
+    if (!valorRadio("sexo")) faltan.push("el sexo");
+    if (faltan.length) {
+      ayuda.textContent = `Falta indicar ${faltan.join(", ")}.`;
+      return;
+    }
+    if (textoCodigo !== "" && !codigoVinculo) {
+      ayuda.textContent =
+        "El código de vínculo debe tener 8 letras o números (por ejemplo ABCD-2345). Corríjalo o déjelo en blanco.";
+      codigo.setAttribute("aria-invalid", "true");
+      codigo.focus();
+      return;
+    }
+    codigo.removeAttribute("aria-invalid");
+    ayuda.textContent = "";
+    const datos: DatosDocente = {
+      departamento: depto.value,
+      municipio: muni.value,
+      edadAnios: Number(valorRadio("edadAnios")),
+      sexo: valorRadio("sexo") as DatosDocente["sexo"],
+      codigoVinculo,
+    };
+    almacenDocente.guardarDatos(datos);
+    if (codigoVinculo) almacenDocente.guardarCodigo(codigoVinculo);
+    else almacenDocente.borrarCodigo();
+    window.location.href = "/docente/cuestionario";
+  });
+  form.dataset.listo = "1";
+</script>
+
+<style>
+  .opcional {
+    font-weight: 500;
+    color: var(--color-texto-suave);
+  }
+  .entrada--codigo {
+    max-width: 14rem;
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>

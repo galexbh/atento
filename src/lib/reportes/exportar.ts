@@ -3,7 +3,10 @@
  *
  * Microdatos (solo rol admin): únicamente respuestas con consentimiento de investigación;
  * municipio recodificado a departamento cuando ese municipio tiene n < 5 en el conjunto
- * exportado; fecha reducida a mes; ítems expandidos a columnas V01..V54 y A01..A18.
+ * exportado; fecha reducida a mes; ítems expandidos a columnas V01..V54, A01..A18 y T01..T43
+ * (versión docente). El código de vínculo NUNCA se exporta: en su lugar va `par_id`, un HMAC del
+ * código con la misma clave por descarga que seudonimiza `id` (vacío si no hay código), que
+ * permite emparejar familia y docente dentro de un mismo archivo pero no entre descargas.
  */
 import { listarInstrumentos, obtenerInstrumento } from "../puntuacion/instrumentos";
 import { consultar, type Db, ESCALAS_TODAS, parsearItems, where } from "./comun";
@@ -108,6 +111,19 @@ export function filasDeReporte(nombre: NombreReporte, datos: unknown): Fila[] {
       return conTipo("perfil", lista("perfiles"));
     case "historico":
       return [...conTipo("mensual", lista("mensual")), ...conTipo("anual", lista("anual"))];
+    case "concordancia":
+      return [
+        ...conTipo("acuerdo", lista("acuerdo")),
+        ...conTipo("correlacion", lista("correlacion")),
+        {
+          tabla: "resumen",
+          ...aplanar({
+            pares: d.pares,
+            dosEntornos: d.dosEntornos,
+            docentesSinCodigo: d.docentesSinCodigo,
+          }),
+        },
+      ];
   }
 }
 
@@ -130,6 +146,7 @@ export const COLUMNAS_MICRODATOS: readonly string[] = [
   "version_instrumento",
   "version_consentimiento",
   "duracion_segundos",
+  "par_id",
   ...ESCALAS_TODAS.map((e) => `punt_${e}`),
   ...ESCALAS_TODAS.map((e) => `pos_${e}`),
   "nivel",
@@ -150,6 +167,7 @@ interface FilaMicro {
   version_consentimiento: string;
   version_instrumento: string;
   duracion_segundos: number | null;
+  codigo_vinculo: string | null;
   [k: string]: string | number | null;
 }
 
@@ -251,6 +269,7 @@ async function universoPeriodo(db: Db, periodo: string): Promise<Universo> {
  * Microdatos anonimizados (solo con consentimiento), listos para CSV o JSON.
  *
  * - `id` se sustituye por un seudónimo HMAC distinto en cada fecha de descarga.
+ * - `codigo_vinculo` no se exporta; `par_id` = HMAC del código (misma clave por descarga) o vacío.
  * - municipio en blanco (`municipio_recodificado = 1`) si tiene n < 5 en el universo del periodo.
  * - k-anonimato sobre (departamento, edad, sexo, informante) en el universo del periodo: si n < 5,
  *   la edad pasa a tramo (`edad_anios` en blanco, `k_generalizado = 1`); si el cruce con tramo
@@ -268,7 +287,7 @@ export async function exportarMicrodatos(
     consultar<FilaMicro>(
       db,
       `SELECT id, creado_en, periodo_anio, departamento, municipio, edad_anios, sexo, informante,
-       items, nivel, version_consentimiento, version_instrumento, duracion_segundos,
+       items, nivel, version_consentimiento, version_instrumento, duracion_segundos, codigo_vinculo,
        ${ESCALAS_TODAS.map((e) => `punt_${e}, pos_${e}`).join(", ")}
      FROM respuestas ${w.sql} ORDER BY creado_en, id`,
       w.params,
@@ -308,6 +327,9 @@ export async function exportarMicrodatos(
       version_instrumento: f.version_instrumento,
       version_consentimiento: f.version_consentimiento,
       duracion_segundos: f.duracion_segundos,
+      par_id: f.codigo_vinculo
+        ? await seudonimizarId(f.codigo_vinculo.toUpperCase(), opciones.secreto, opciones.fecha)
+        : null,
       nivel: f.nivel,
     };
     for (const e of ESCALAS_TODAS) {
@@ -375,6 +397,12 @@ export function generarCodebook(): string {
       "Versión (fecha) del consentimiento aceptado",
     ],
     ["duracion_segundos", "entero o vacío", ">= 0", "Tiempo de llenado"],
+    [
+      "par_id",
+      "texto (16 hex) o vacío",
+      "",
+      "Seudónimo HMAC del código de vínculo (misma clave por descarga que `id`): la fila de la familia y la del docente del mismo niño comparten par_id dentro de un archivo; vacío si no hubo código. El código nunca se exporta",
+    ],
     ["nivel", "texto", "bajo, moderado, alto", "Nivel orientativo de Atento (regla propia)"],
   ];
   for (const g of generales) lineas.push(`| ${g.join(" | ")} |`);
@@ -385,6 +413,9 @@ export function generarCodebook(): string {
   lineas.push("");
   lineas.push(
     'Definiciones: "cribado positivo" = pos_inatencion = 1 o pos_hiperactividad = 1; "combinado" = ambas.',
+  );
+  lineas.push(
+    "Versión docente (`vanderbilt-docente-es-1.0`, informante = docente): departamento y municipio son los de la ESCUELA; la escala combinada de oposición/conducta (T19–T28) se guarda en `punt_conducta`/`pos_conducta` (≥ 3 de 10) y `pos_oposicion` es siempre 0 (sin ítems). Estas filas no entran en el mapa público. Emparejar con la familia por `par_id` (más reciente de cada informante si hay varias).",
   );
   for (const id of listarInstrumentos()) {
     const inst = obtenerInstrumento(id);

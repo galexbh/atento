@@ -1,0 +1,289 @@
+---
+/**
+ * Cuestionario paginado compartido por la familia (/cribado/cuestionario) y el docente
+ * (/docente/cuestionario). Renderiza todos los ítems en el HTML (ocultos por página) y la
+ * pantalla final con Turnstile y honeypot; la lógica vive en `lib/cliente/motor-cuestionario.ts`.
+ *
+ * El texto de introducción va en el slot por defecto (dentro de `#intro`).
+ */
+import Pasos from "@/components/Pasos.astro";
+import { icono } from "@/components/svg";
+import type { ItemOrdenado } from "@/lib/cliente/orden";
+import { obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
+
+export interface PresentacionDesempeno {
+  /** Icono de `components/svg` junto al ítem. */
+  icono: string;
+  /** Texto antes del enunciado ("Cómo le va en", "Rendimiento académico:"). */
+  prefijo: string;
+  /** Pasa el enunciado a minúsculas (útil cuando el prefijo forma una frase). */
+  minusculas?: boolean;
+}
+
+interface Props {
+  items: ItemOrdenado[];
+  paginas: number;
+  instrumentoId: string;
+  version: string;
+  claveTurnstile: string;
+  /** Presentación de cada ítem de desempeño, por id. */
+  desempeno: Record<string, PresentacionDesempeno>;
+  /** Texto del botón final ("Ver mi resultado", "Ver la hoja para imprimir"). */
+  textoEnviar: string;
+  pasos?: string[];
+  etiquetaPasos?: string;
+}
+
+const {
+  items,
+  paginas,
+  instrumentoId,
+  version,
+  claveTurnstile,
+  desempeno,
+  textoEnviar,
+  pasos,
+  etiquetaPasos,
+} = Astro.props;
+
+const opcionesPor = (id: string, tipo: "frecuencia" | "desempeno") => {
+  const inst = obtenerInstrumento(id);
+  return tipo === "frecuencia" ? inst.opcionesFrecuencia : inst.opcionesDesempeno;
+};
+---
+
+<div class="flujo cuestionario" id="cuestionario" data-paginas={paginas} data-items={items.length} data-instrumento={instrumentoId} data-version={version} data-turnstile={claveTurnstile}>
+  <Pasos actual={3} pasos={pasos} etiqueta={etiquetaPasos} />
+
+  <div class="progreso no-imprimir">
+    <div class="contenedor progreso__fila">
+      <div class="progreso__barra" role="progressbar" aria-labelledby="progreso-texto" aria-valuemin="0" aria-valuemax={items.length} aria-valuenow="0" id="progreso-barra">
+        <span class="progreso__relleno" id="progreso-relleno" style="transform: scaleX(0)"></span>
+      </div>
+      <p class="progreso__texto" id="progreso-texto" aria-live="polite">Página 1 de {paginas}</p>
+    </div>
+  </div>
+
+  <form class="contenedor flujo__cuerpo" id="formulario" novalidate autocomplete="off">
+    <div id="intro" class="intro">
+      <slot />
+    </div>
+
+    <div id="paginas">
+      {
+        items.map((o) => {
+          const opciones = opcionesPor(o.instrumentoId, o.item.tipo);
+          const esDesempeno = o.item.tipo === "desempeno";
+          const presentacion = desempeno[o.item.id];
+          const idItem = `item-${o.item.id}`;
+          return (
+            <fieldset class="item" data-pagina={o.pagina} data-id={o.item.id} data-instrumento={o.instrumentoId} data-posicion={o.posicion} hidden>
+              <legend class="item__legend">
+                <span class="item__numero tabular" aria-hidden="true">{o.posicion}</span>
+                <span class="visualmente-oculto">Pregunta {o.posicion} de {items.length}.</span>
+                {esDesempeno ? (
+                  <span class="item__texto">
+                    <span class="item__desempeno-icono" set:html={icono(presentacion?.icono ?? "tareas")} />
+                    <span class="item__desempeno-prefijo">{presentacion?.prefijo ?? ""}</span>{" "}
+                    {presentacion?.minusculas ? o.item.texto.toLowerCase() : o.item.texto}
+                  </span>
+                ) : (
+                  <span class="item__texto">{o.item.texto}</span>
+                )}
+              </legend>
+              {o.item.ejemplo && <p class="item__ejemplo">Por ejemplo: {o.item.ejemplo}</p>}
+              <div class={`opciones item__opciones ${esDesempeno ? "item__opciones--cinco" : "item__opciones--cuatro"}`}>
+                {opciones.map((op) => (
+                  <label class="opcion opcion--centrada">
+                    <input type="radio" name={idItem} value={op.valor} />
+                    <span>{op.etiqueta}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          );
+        })
+      }
+    </div>
+
+    <p class="flujo__ayuda" id="ayuda" role="alert"></p>
+
+    <div class="flujo__acciones" id="acciones">
+      <button type="button" class="boton boton--texto" id="atras">Atrás</button>
+      <button type="button" class="boton boton--primario boton--grande" id="siguiente">Siguiente</button>
+    </div>
+
+    <section id="envio" class="envio" hidden aria-labelledby="envio-titulo">
+      <h2 id="envio-titulo" tabindex="-1">Listo. Falta solo un paso.</h2>
+      <p class="grande" id="envio-texto"></p>
+      <p id="envio-nota" class="suave"></p>
+      <div id="turnstile-widget" class="envio__turnstile"></div>
+      <div class="hp" aria-hidden="true">
+        <label for="hp">No llenar este campo</label>
+        <input type="text" id="hp" name="hp" tabindex="-1" autocomplete="off" />
+      </div>
+      <div class="flujo__acciones">
+        <button type="button" class="boton boton--texto" id="envio-atras">Revisar respuestas</button>
+        <button type="submit" class="boton boton--primario boton--grande" id="enviar">{textoEnviar}</button>
+      </div>
+      <p class="flujo__ayuda" id="envio-estado" aria-live="polite"></p>
+    </section>
+  </form>
+</div>
+
+<style>
+  .cuestionario {
+    background: var(--color-fondo);
+  }
+  .progreso {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-superficie);
+    border-bottom: 1px solid var(--color-borde);
+  }
+  .progreso__fila {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    padding-block: var(--espacio-2);
+  }
+  .progreso__barra {
+    flex: 1;
+    height: 0.75rem;
+    border-radius: 999px;
+    background: var(--color-primario-suave);
+    overflow: hidden;
+  }
+  .progreso__relleno {
+    display: block;
+    height: 100%;
+    background: var(--color-primario);
+    border-radius: 999px;
+    width: 100%;
+    transform-origin: left center;
+    transition: transform 0.4s var(--facil);
+  }
+  .progreso__texto {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-texto-suave);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .intro {
+    margin-bottom: var(--espacio-4);
+  }
+  .item {
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    padding: var(--espacio-3) var(--espacio-3) var(--espacio-3);
+    margin-bottom: var(--espacio-3);
+    animation: item-entra 0.4s var(--facil) both;
+  }
+  .item[hidden] {
+    display: none;
+  }
+  .item--falta {
+    border-color: var(--color-coral);
+  }
+  @keyframes item-entra {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .item__legend {
+    float: left;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    gap: var(--espacio-2);
+    align-items: start;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: var(--espacio-3);
+    max-width: none;
+  }
+  .item__numero {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--color-primario-suave);
+    color: var(--color-primario-fuerte);
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+  .item__texto {
+    text-wrap: pretty;
+  }
+  .item__desempeno-prefijo {
+    color: var(--color-texto-suave);
+    font-weight: 600;
+  }
+  .item__desempeno-icono :global(svg) {
+    width: 1.3em;
+    height: 1.3em;
+    vertical-align: -0.25em;
+    margin-right: 0.3rem;
+    color: var(--color-primario);
+  }
+  .item__ejemplo,
+  .item__opciones {
+    clear: both;
+  }
+  .item__ejemplo {
+    margin: -0.5rem 0 var(--espacio-3) 2.75rem;
+    color: var(--color-texto-suave);
+    font-size: 0.95rem;
+  }
+  .item__opciones--cuatro {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .item__opciones--cinco {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .item__opciones--cinco .opcion:last-child {
+    grid-column: 1 / -1;
+  }
+  .item .opcion {
+    font-size: 0.95rem;
+  }
+  .envio {
+    padding-top: var(--espacio-3);
+  }
+  .envio__turnstile {
+    margin: var(--espacio-3) 0;
+    min-height: 0;
+  }
+  .hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  @media (min-width: 40rem) {
+    .item {
+      padding: var(--espacio-4);
+    }
+    .item__opciones--cuatro {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .item__opciones--cinco {
+      grid-template-columns: repeat(5, 1fr);
+    }
+    .item__opciones--cinco .opcion:last-child {
+      grid-column: auto;
+    }
+  }
+</style>

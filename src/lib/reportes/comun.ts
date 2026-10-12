@@ -5,6 +5,7 @@
  * - "cribado positivo" = inatención positiva O hiperactividad positiva.
  * - "combinado" = inatención Y hiperactividad positivas.
  */
+import { listarInstrumentos, obtenerInstrumento } from "../puntuacion/instrumentos";
 import type { Escala } from "../puntuacion/tipos";
 import { construirWhere, type Filtros, type OpcionesWhere } from "./filtros";
 
@@ -39,6 +40,44 @@ export const RANGO_PUNTAJE: Record<Escala, { max: number; ancho: number }> = {
   ansiedad_depresion: { max: 21, ancho: 3 },
   desempeno: { max: 35, ancho: 5 },
 };
+
+export interface RangoEscala {
+  min: number;
+  max: number;
+  ancho: number;
+}
+
+/**
+ * Rango del histograma por escala según el filtro de instrumento. Con el instrumento docente
+ * (conducta = 10 ítems → 0–30; desempeño = 8 ítems → 8–40) se calcula desde sus ítems; sin
+ * filtro se usan los de padres ampliando el máximo de desempeño para que quepan también los
+ * puntajes docentes (8 ítems).
+ */
+export function rangosPuntaje(versionInstrumento?: string): Record<Escala, RangoEscala> {
+  const salida = {} as Record<Escala, RangoEscala>;
+  const padres = (escala: Escala): RangoEscala => ({
+    min: escala === "desempeno" ? 7 : 0,
+    ...RANGO_PUNTAJE[escala],
+  });
+  if (versionInstrumento && listarInstrumentos().includes(versionInstrumento)) {
+    const inst = obtenerInstrumento(versionInstrumento);
+    for (const escala of ESCALAS_TODAS) {
+      const items = inst.items.filter((i) => i.escala === escala);
+      if (items.length === 0) {
+        salida[escala] = padres(escala);
+        continue;
+      }
+      const desempeno = escala === "desempeno";
+      const min = desempeno ? items.length : 0;
+      const max = items.length * (desempeno ? 5 : 3);
+      salida[escala] = { min, max, ancho: RANGO_PUNTAJE[escala].ancho };
+    }
+    return salida;
+  }
+  for (const escala of ESCALAS_TODAS) salida[escala] = padres(escala);
+  salida.desempeno = { ...salida.desempeno, max: 40 };
+  return salida;
+}
 
 export const SQL_POSITIVO =
   "(COALESCE(pos_inatencion, 0) = 1 OR COALESCE(pos_hiperactividad, 0) = 1)";

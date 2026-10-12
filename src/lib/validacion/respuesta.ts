@@ -4,8 +4,14 @@
  * El esquema es estricto: cualquier campo no declarado, cualquier ítem que
  * no pertenezca al instrumento o cualquier municipio que no corresponda al
  * departamento hace fallar la validación.
+ *
+ * Reglas cruzadas de informante (versión docente, 2026-10-12):
+ * - Un instrumento de informante "padres" (Vanderbilt padres, Atento) no admite
+ *   `informante: "docente"`; los docentes usan su propio instrumento.
+ * - El instrumento docente solo admite `informante: "docente"` y no admite `respuestasAtento`.
  */
 import { z } from "zod";
+import { CODIGO_VINCULO_RE } from "@/lib/compartido/codigo-vinculo";
 import { LONGITUD_MAXIMA_TOKEN } from "@/lib/compartido/turnstile";
 import { esMunicipioValido, obtenerDepartamento } from "../catalogo/geo";
 import { listarInstrumentos, obtenerInstrumento } from "../puntuacion/instrumentos";
@@ -13,8 +19,6 @@ import { RANGO_VALOR } from "../puntuacion/puntuar";
 
 /** UUID v4 (variante RFC 4122). */
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const CODIGO_VINCULO = /^[A-Za-z0-9]{8}$/;
 
 /** Instrumento de los ítems adicionales opcionales (`respuestasAtento`). */
 const INSTRUMENTO_ATENTO = "atento-0.1";
@@ -49,7 +53,7 @@ export const EsquemaEnvio = z
     itemAbandono: z.string().min(1).max(16).optional(),
     codigoVinculo: z
       .string()
-      .regex(CODIGO_VINCULO, "codigoVinculo: 8 caracteres alfanuméricos")
+      .regex(CODIGO_VINCULO_RE, "codigoVinculo: 8 caracteres alfanuméricos")
       .optional(),
     turnstileToken: z.string().min(1).max(LONGITUD_MAXIMA_TOKEN),
     /** Honeypot: debe venir vacío. */
@@ -75,6 +79,30 @@ export const EsquemaEnvio = z
     // Ítems: solo del instrumento y dentro del rango de su tipo.
     if (!listarInstrumentos().includes(envio.instrumentoId)) return;
     const instrumento = obtenerInstrumento(envio.instrumentoId);
+
+    // Informante coherente con el instrumento.
+    if (instrumento.informante === "docente" && envio.informante !== "docente") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["informante"],
+        message: "el instrumento docente solo admite informante 'docente'",
+      });
+    }
+    if (instrumento.informante !== "docente" && envio.informante === "docente") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["informante"],
+        message: "los docentes responden con el instrumento docente",
+      });
+    }
+    if (instrumento.informante === "docente" && envio.respuestasAtento !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["respuestasAtento"],
+        message: "el instrumento docente no admite respuestasAtento",
+      });
+    }
+
     const items = new Map(instrumento.items.map((i) => [i.id, i]));
     for (const [itemId, valor] of Object.entries(envio.respuestas)) {
       const item = items.get(itemId);

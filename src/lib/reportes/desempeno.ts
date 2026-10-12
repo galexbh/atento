@@ -1,5 +1,16 @@
-/** Reporte 6: desempeño. Distribución de los ítems 1-5 y relación con positividad de síntomas. */
-import { obtenerInstrumento } from "../puntuacion/instrumentos";
+/**
+ * Reporte 6: desempeño. Distribución de los ítems 1-5 y relación con positividad de síntomas.
+ *
+ * Con el filtro `versionInstrumento` se muestran los ítems de desempeño de ese instrumento
+ * (V48–V54 de padres o T36–T43 del docente); sin filtro, los de ambos (ids distintos).
+ */
+import {
+  INSTRUMENTO_ACTUAL,
+  INSTRUMENTO_DOCENTE,
+  listarInstrumentos,
+  obtenerInstrumento,
+} from "../puntuacion/instrumentos";
+import type { Item } from "../puntuacion/tipos";
 import { type Db, leerFilasConItems } from "./comun";
 import { redondear } from "./estadistica";
 import type { Filtros } from "./filtros";
@@ -25,8 +36,7 @@ export interface ReporteDesempeno {
 
 export async function reporteDesempeno(db: Db, filtros: Filtros): Promise<ReporteDesempeno> {
   const filas = await leerFilasConItems(db, filtros);
-  const vanderbilt = obtenerInstrumento("vanderbilt-padres-es-1.0");
-  const itemsDesempeno = vanderbilt.items.filter((i) => i.tipo === "desempeno");
+  const itemsDesempeno = itemsDesempenoPara(filtros.versionInstrumento);
   const items = itemsDesempeno.map((item): ItemDesempeno => {
     const valores = filas
       .map((f) => f.items[item.id])
@@ -68,4 +78,13 @@ export async function reporteDesempeno(db: Db, filtros: Filtros): Promise<Report
       sinSintomas: proporcion(sinSintomasDesemp, sinSintomas),
     },
   };
+}
+
+/** Ítems de desempeño a mostrar según el filtro de instrumento. */
+export function itemsDesempenoPara(versionInstrumento?: string): Item[] {
+  const ids =
+    versionInstrumento && listarInstrumentos().includes(versionInstrumento)
+      ? [versionInstrumento]
+      : [INSTRUMENTO_ACTUAL, INSTRUMENTO_DOCENTE];
+  return ids.flatMap((id) => obtenerInstrumento(id).items.filter((i) => i.tipo === "desempeno"));
 }

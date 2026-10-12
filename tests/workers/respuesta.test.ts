@@ -262,4 +262,78 @@ describe("POST /api/respuesta", () => {
       .first<{ items: string }>();
     expect(JSON.parse(fila?.items ?? "{}").atento).toEqual({ A01: 2, A02: 0 });
   });
+
+  describe("versión docente", () => {
+    const docente = obtenerInstrumento("vanderbilt-docente-es-1.0");
+    const respuestasDocente = (frecuencia = 1, desempeno = 3) => {
+      const r: Record<string, number> = {};
+      for (const item of docente.items) {
+        r[item.id] = item.tipo === "desempeno" ? desempeno : frecuencia;
+      }
+      return r;
+    };
+    const envioDocente = (extra: Partial<Envio> = {}): Envio =>
+      envioValido({
+        instrumentoId: "vanderbilt-docente-es-1.0",
+        respuestas: respuestasDocente(),
+        informante: "docente",
+        versionConsentimiento: "2026-10-12",
+        codigoVinculo: "ABCD2345",
+        ...extra,
+      });
+
+    it("POST docente válido -> 201 sin nivel; fila con informante docente y código guardado", async () => {
+      const envio = envioDocente({ respuestas: respuestasDocente(3, 5) });
+      const r = await enviar(envio);
+      expect(r.status).toBe(201);
+      // Al docente no se le devuelve nivel ni interpretación.
+      expect(await r.json()).toEqual({ ok: true });
+      const fila = await env.DB.prepare("SELECT * FROM respuestas WHERE id = ?")
+        .bind(envio.id)
+        .first<Record<string, unknown>>();
+      expect(fila).toMatchObject({
+        informante: "docente",
+        version_instrumento: "vanderbilt-docente-es-1.0",
+        codigo_vinculo: "ABCD2345",
+        version_consentimiento: "2026-10-12",
+        pos_inatencion: 1,
+        pos_conducta: 1,
+        pos_oposicion: 0,
+        pos_desempeno: 1,
+        // El servidor sí guarda el nivel para investigación.
+        nivel: "alto",
+      });
+      expect(JSON.parse(fila?.items as string)).toEqual(envio.respuestas);
+    });
+
+    it("POST docente sin código de vínculo -> 201 con codigo_vinculo NULL", async () => {
+      const { codigoVinculo: _sin, ...envio } = envioDocente();
+      const r = await enviar(envio);
+      expect(r.status).toBe(201);
+      const fila = await env.DB.prepare("SELECT codigo_vinculo FROM respuestas WHERE id = ?")
+        .bind(envio.id)
+        .first<{ codigo_vinculo: string | null }>();
+      expect(fila?.codigo_vinculo).toBeNull();
+    });
+
+    it("instrumento de padres con informante 'docente' -> 400", async () => {
+      const r = await enviar(envioValido({ informante: "docente" }));
+      expect(r.status).toBe(400);
+      const cuerpo = await r.json<{ errores: { campo: string }[] }>();
+      expect(cuerpo.errores.map((e) => e.campo)).toContain("informante");
+      expect(llamadasSiteverify).toHaveLength(0);
+    });
+
+    it("instrumento docente con informante de familia -> 400", async () => {
+      const r = await enviar(envioDocente({ informante: "madre" }));
+      expect(r.status).toBe(400);
+    });
+
+    it("instrumento docente con respuestasAtento -> 400", async () => {
+      const r = await enviar(envioDocente({ respuestasAtento: { A01: 1 } }));
+      expect(r.status).toBe(400);
+      const cuerpo = await r.json<{ errores: { campo: string }[] }>();
+      expect(cuerpo.errores.map((e) => e.campo)).toContain("respuestasAtento");
+    });
+  });
 });

@@ -16,8 +16,12 @@
  * - Filas por municipio (código INE de 4 dígitos) y, además, una fila por departamento con
  *   `municipio = departamento + "00"` (p. ej. "0800" = Francisco Morazán), código que ningún
  *   municipio real usa (los municipios van de 01 en adelante).
- * - `version_instrumento`: cada versión real y, además, "todas".
+ * - `version_instrumento`: cada versión real y, además, "todas". Las respuestas de instrumentos
+ *   que no cuentan en el mapa (versión docente, ver `INSTRUMENTOS_FUERA_DEL_MAPA`) solo se agregan
+ *   en su propia versión, nunca en "todas", para no contar dos veces al mismo niño (familia y
+ *   docente). El panel las ve filtrando por su versión.
  */
+import { cuentaEnMapa } from "../puntuacion/instrumentos";
 
 export const UMBRAL_SUPRESION = 5;
 export const VERSION_TODAS = "todas";
@@ -175,7 +179,9 @@ export function agregar(filas: Iterable<FilaRespuesta>): FilaAgregado[] {
     const versiones =
       fila.version_instrumento === VERSION_TODAS
         ? [VERSION_TODAS]
-        : [fila.version_instrumento, VERSION_TODAS];
+        : cuentaEnMapa(fila.version_instrumento)
+          ? [fila.version_instrumento, VERSION_TODAS]
+          : [fila.version_instrumento];
     const codigos = [fila.municipio, codigoDepartamentoAgregado(fila.departamento)];
     for (const periodo of periodosDeFecha(fila.creado_en)) {
       for (const version of versiones) {

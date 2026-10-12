@@ -20,7 +20,9 @@ Las casillas (a) y (b) son obligatorias. La casilla (c) es opcional y debe apare
 
 ### (a) Obligatoria — Soy el adulto responsable
 
-> ☐ Confirmo que soy mayor de 18 años y que soy madre, padre, tutor o responsable del niño o niña, o un docente con autorización de su familia. Entiendo que Atento es un cribado y **no un diagnóstico**, y que no sustituye la evaluación de un profesional de salud.
+> Los docentes usan su propio formulario y consentimiento (`consentimiento-docente.md`).
+>
+> ☐ Confirmo que soy mayor de 18 años y que soy madre, padre, tutor o responsable del niño o niña. Entiendo que Atento es un cribado y **no un diagnóstico**, y que no sustituye la evaluación de un profesional de salud.
 
 ### (b) Obligatoria — Términos y privacidad
 
