@@ -1,62 +1,309 @@
 ---
-import Admin from "@/layouts/Admin.astro";
+/**
+ * Entrada al panel. Página independiente (sin el layout del panel) para no mostrar su estructura
+ * a quien no ha iniciado sesión. Los textos son deliberadamente genéricos: no revelan el
+ * mecanismo de acceso, la duración de la sesión ni los límites de intentos.
+ */
+import "@/styles/global.css";
 import { autenticar, modoAdmin } from "@/lib/admin/proteger";
 import { procesarEntrar } from "@/lib/admin/sesion";
 
-// El formulario envía POST a esta misma página (fuera de /api, sin comprobación de Origin).
+// El formulario envía POST a esta misma página; el middleware verifica el origen.
 if (Astro.request.method === "POST") return procesarEntrar(Astro.request);
 
 const usuario = await autenticar(Astro.request);
 if (usuario) return Astro.redirect("/admin", 302);
-const modo = modoAdmin();
+
+const conContrasena = modoAdmin() === "password";
 const error = Astro.url.searchParams.get("error");
 const msg = Astro.url.searchParams.get("msg");
 const volverBruto = Astro.url.searchParams.get("volver") ?? "/admin";
 const volver = /^\/admin(\/[\w\-/?=&%.]*)?$/.test(volverBruto) ? volverBruto : "/admin";
+
 const MENSAJES: Record<string, string> = {
-  credenciales: "Contraseña incorrecta.",
-  bloqueado: "Demasiados intentos. Espera 15 minutos antes de volver a intentarlo.",
+  credenciales: "No pudimos iniciar tu sesión. Revisa la contraseña e inténtalo de nuevo.",
+  bloqueado: "Demasiados intentos seguidos. Espera un momento antes de volver a intentarlo.",
 };
+const mensajeError = error ? MENSAJES[error] : undefined;
+const nonce = Astro.locals.nonce;
 Astro.response.status = 401;
 ---
 
-<Admin titulo="Entrar al panel" sinFiltros activo="entrar">
-  <section class="panel entrar">
-    {modo === "password" ? (
-      <>
-        <p>Acceso de respaldo con contraseña única (modo <code>password</code>). La sesión dura 8 horas.</p>
-        {error && MENSAJES[error] && <p class="aviso" role="alert">{MENSAJES[error]}</p>}
-        {msg === "sesiones-cerradas" && <p class="aviso" role="status">Todas las sesiones quedaron cerradas. Vuelve a entrar.</p>}
-        <form method="post" action="/admin/entrar" class="entrar__form">
-          <input type="hidden" name="volver" value={volver} />
-          <label for="contrasena">Contraseña</label>
-          <input id="contrasena" name="contrasena" type="password" autocomplete="current-password" required minlength="12" />
-          <button type="submit" class="boton">Entrar</button>
-        </form>
-      </>
-    ) : (
-      <>
-        <p>Este panel está protegido con <strong>Cloudflare Access</strong>. Si ves esta página, tu sesión de Access no es válida o tu correo no está en la lista de personas autorizadas.</p>
-        <p>Pide acceso a <a href="mailto:info@galexbh.dev">info@galexbh.dev</a> o vuelve a <a href="/admin">/admin</a> para iniciar sesión con Access.</p>
-      </>
-    )}
-  </section>
-</Admin>
+<!doctype html>
+<html lang="es-HN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Acceso · Atento</title>
+    <link rel="icon" href="/marca/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body class="acceso">
+    <main class="acceso__marco">
+      <section class="acceso__tarjeta" aria-labelledby="acceso-titulo">
+        <a class="acceso__marca" href="/" aria-label="Atento, ir al sitio">
+          <img src="/marca/simbolo.svg" alt="" width="48" height="48" />
+          <span>Atento</span>
+        </a>
+
+        <h1 id="acceso-titulo">Acceso del equipo</h1>
+        <p class="acceso__intro">Este espacio es solo para el equipo del proyecto.</p>
+
+        {
+          msg === "sesiones-cerradas" && (
+            <p class="acceso__aviso acceso__aviso--info" role="status">
+              Se cerraron todas las sesiones. Vuelve a entrar.
+            </p>
+          )
+        }
+        {
+          mensajeError && (
+            <p id="acceso-error" class="acceso__aviso acceso__aviso--error" role="alert">
+              {mensajeError}
+            </p>
+          )
+        }
+
+        {
+          conContrasena ? (
+            <form method="post" action="/admin/entrar" class="acceso__form">
+              <input type="hidden" name="volver" value={volver} />
+              <label for="contrasena">Contraseña</label>
+              <div class="acceso__campo">
+                <input
+                  id="contrasena"
+                  name="contrasena"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  autofocus
+                  aria-invalid={mensajeError ? "true" : undefined}
+                  aria-describedby={mensajeError ? "acceso-error" : undefined}
+                />
+                <button
+                  type="button"
+                  class="acceso__ver"
+                  data-ver-contrasena
+                  aria-controls="contrasena"
+                  aria-pressed="false"
+                  hidden
+                >
+                  Mostrar
+                </button>
+              </div>
+              <button type="submit" class="boton boton--azul acceso__entrar">
+                Entrar
+              </button>
+            </form>
+          ) : (
+            <div class="acceso__sin-permiso">
+              <p>
+                Tu cuenta no tiene acceso a este espacio o tu sesión expiró. Si crees que es un error,
+                escribe a <a href="mailto:info@galexbh.dev">info@galexbh.dev</a>.
+              </p>
+              <a class="boton boton--azul acceso__entrar" href="/admin">
+                Intentar de nuevo
+              </a>
+            </div>
+          )
+        }
+
+        <p class="acceso__volver">
+          <a href="/">← Volver al sitio</a>
+        </p>
+      </section>
+    </main>
+
+    <script is:inline nonce={nonce}>
+      (() => {
+        const boton = document.querySelector("[data-ver-contrasena]");
+        const campo = document.getElementById("contrasena");
+        if (!boton || !campo) return;
+        boton.hidden = false;
+        boton.addEventListener("click", () => {
+          const visible = campo.type === "text";
+          campo.type = visible ? "password" : "text";
+          boton.textContent = visible ? "Mostrar" : "Ocultar";
+          boton.setAttribute("aria-pressed", String(!visible));
+          campo.focus();
+        });
+      })();
+    </script>
+  </body>
+</html>
 
 <style>
-  .entrar {
-    max-width: 28rem;
+  .acceso {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background:
+      radial-gradient(60rem 40rem at 10% -10%, var(--color-primario-suave), transparent 60%),
+      radial-gradient(40rem 30rem at 110% 110%, var(--color-coral-suave), transparent 60%),
+      var(--color-fondo);
+    color: var(--color-texto);
+    font-family: var(--fuente-base);
   }
-  .entrar__form {
+
+  .acceso__marco {
+    min-height: inherit;
+    display: grid;
+    place-items: center;
+    padding: var(--espacio-4) 1rem;
+  }
+
+  .acceso__tarjeta {
+    width: 100%;
+    max-width: 26rem;
+    background: var(--color-superficie);
+    border: 2px solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    box-shadow: var(--sombra-2);
+    padding: var(--espacio-5) var(--espacio-4);
+  }
+
+  .acceso__marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-texto);
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--espacio-4);
+  }
+
+  .acceso__marca img {
+    border-radius: 12px;
+  }
+
+  .acceso h1 {
+    margin: 0 0 var(--espacio-1);
+    font-size: clamp(1.6rem, 4vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .acceso__intro {
+    margin: 0 0 var(--espacio-4);
+    color: var(--color-texto-suave);
+  }
+
+  .acceso__aviso {
+    margin: 0 0 var(--espacio-3);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radio);
+    border-left: 4px solid;
+    font-size: 0.95rem;
+  }
+
+  .acceso__aviso--error {
+    background: var(--color-coral-suave);
+    border-color: var(--color-coral-texto);
+    color: var(--color-texto);
+  }
+
+  .acceso__aviso--info {
+    background: var(--color-primario-suave);
+    border-color: var(--color-primario);
+    color: var(--color-texto);
+  }
+
+  .acceso__form {
     display: grid;
     gap: var(--espacio-2);
   }
-  .entrar__form input {
+
+  .acceso__form label {
+    font-weight: 700;
+  }
+
+  .acceso__campo {
+    position: relative;
+    display: flex;
+  }
+
+  .acceso__campo input {
+    flex: 1;
+    min-width: 0;
     font: inherit;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid var(--color-borde);
+    font-size: 1.05rem;
+    min-height: 3rem;
+    padding: 0.6rem 5.5rem 0.6rem 0.9rem;
+    border: 2px solid var(--color-borde-fuerte);
     border-radius: var(--radio);
     background: var(--color-fondo);
     color: var(--color-texto);
+  }
+
+  .acceso__campo input:focus-visible {
+    outline: 3px solid var(--color-foco);
+    outline-offset: 2px;
+    border-color: var(--color-primario);
+  }
+
+  .acceso__campo input[aria-invalid="true"] {
+    border-color: var(--color-coral-texto);
+  }
+
+  .acceso__ver {
+    position: absolute;
+    right: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    min-height: 2.5rem;
+    padding: 0 0.85rem;
+    border: 0;
+    border-radius: calc(var(--radio) - 4px);
+    background: transparent;
+    color: var(--color-primario-fuerte);
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .acceso__ver:hover {
+    background: var(--color-primario-suave);
+  }
+
+  .acceso__ver:focus-visible {
+    outline: 3px solid var(--color-foco);
+    outline-offset: 1px;
+  }
+
+  .acceso__entrar {
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--espacio-2);
+    min-height: 3rem;
+  }
+
+  .acceso__sin-permiso p {
+    margin: 0 0 var(--espacio-3);
+  }
+
+  .acceso__volver {
+    margin: var(--espacio-4) 0 0;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .acceso__volver a {
+    color: var(--color-texto-suave);
+  }
+
+  .acceso__volver a:hover {
+    color: var(--color-texto);
+  }
+
+  @media (max-width: 30rem) {
+    .acceso__tarjeta {
+      padding: var(--espacio-4) var(--espacio-3);
+      border-radius: var(--radio);
+    }
   }
 </style>

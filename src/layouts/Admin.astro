@@ -55,6 +55,8 @@ const consulta = Astro.url.search;
           <img src="/marca/simbolo.svg" alt="" width="28" height="28" />
           <span>Atento · Panel</span>
         </a>
+        {/* El menú solo se muestra con sesión: sin ella no se revela la estructura del panel. */}
+        {usuario && (
         <nav aria-label="Secciones del panel">
           <ul class="admin__nav">
             {
@@ -71,6 +73,7 @@ const consulta = Astro.url.search;
             }
           </ul>
         </nav>
+        )}
         {
           usuario && (
             <div class="admin__usuario">
