@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PUERTO = 4321;
-const URL_BASE = `http://localhost:${PUERTO}`;
+/** Con E2E_URL las pruebas corren contra una build ya servida (p. ej. `pnpm preview`). */
+const URL_BUILD = process.env.E2E_URL;
+const URL_BASE = URL_BUILD ?? `http://localhost:${PUERTO}`;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -18,10 +20,12 @@ export default defineConfig({
     { name: "movil", use: { ...devices["Pixel 7"] } },
     { name: "escritorio", use: { ...devices["Desktop Chrome"] } },
   ],
-  webServer: {
-    command: `pnpm dev --port ${PUERTO}`,
-    url: URL_BASE,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: URL_BUILD
+    ? undefined
+    : {
+        command: `pnpm dev --port ${PUERTO}`,
+        url: URL_BASE,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });

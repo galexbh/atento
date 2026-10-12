@@ -76,6 +76,14 @@ jobs:
       - run: pnpm test:e2e
         env:
           CI: "true"
+      - name: Pruebas contra la build (CSP y PWA)
+        run: |
+          pnpm build
+          pnpm preview > preview.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:8787/ && break; sleep 2; done
+          E2E_URL=http://127.0.0.1:8787 pnpm exec playwright test tests/e2e/csp.spec.ts tests/e2e/pwa.spec.ts
+        env:
+          CI: "true"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

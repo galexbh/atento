@@ -55,5 +55,8 @@ export default defineConfig({
     resolve: {
       alias: { "@": new URL("./src", import.meta.url).pathname },
     },
+    // Nunca incrustar scripts en el HTML: la CSP solo permite scripts con nonce o de 'self', y
+    // Astro incrusta los scripts pequeños sin nonce. Con 0 todos se sirven como archivo propio.
+    build: { assetsInlineLimit: 0 },
   },
 });
