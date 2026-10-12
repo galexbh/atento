@@ -5,6 +5,7 @@ import BotonTema from "@/components/BotonTema.astro";
 import TemaInicial from "@/components/TemaInicial.astro";
 import type { Usuario } from "@/lib/admin/proteger";
 import { modoAdmin } from "@/lib/admin/proteger";
+import { NOMBRE_ROL } from "@/lib/admin/sesion";
 import type { Filtros as TipoFiltros } from "@/lib/reportes/filtros";
 import { etiquetaPeriodo } from "@/lib/reportes/filtros";
 
@@ -32,13 +33,20 @@ const NAV: Array<{ id: string; ruta: string; etiqueta: string }> = [
   { id: "psicometria", ruta: "/admin/psicometria", etiqueta: "Psicometría" },
   { id: "calidad", ruta: "/admin/calidad", etiqueta: "Calidad de datos" },
   { id: "investigacion", ruta: "/admin/investigacion", etiqueta: "Investigación" },
-  { id: "concordancia", ruta: "/admin/concordancia", etiqueta: "Concordancia padre–docente" },
+  { id: "concordancia", ruta: "/admin/concordancia", etiqueta: "Concordancia" },
   { id: "historico", ruta: "/admin/historico", etiqueta: "Histórico" },
   { id: "exportar", ruta: "/admin/exportar", etiqueta: "Exportar" },
   { id: "sistema", ruta: "/admin/sistema", etiqueta: "Sistema" },
 ];
 const consulta = Astro.url.search;
 const ETIQUETA_ROL = { admin: "Acceso completo", investigador: "Solo lectura" } as const;
+/** Con contraseña compartida se muestra el rol (no el texto guardado en sesiones antiguas); con
+ *  Access, el correo de la persona. */
+const nombreVisible = usuario
+  ? usuario.mecanismo === "password"
+    ? NOMBRE_ROL[usuario.rol]
+    : usuario.email
+  : "";
 /** Inicial para el avatar: primera letra del nombre o del correo. */
 const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
 ---
@@ -84,9 +92,9 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
           usuario && (
             <div class="admin__cuenta">
               <div class="admin__persona">
-                <span class="admin__avatar" aria-hidden="true">{iniciales(usuario.email)}</span>
+                <span class="admin__avatar" aria-hidden="true">{iniciales(nombreVisible)}</span>
                 <span class="admin__identidad">
-                  <span class="admin__nombre">{usuario.email}</span>
+                  <span class="admin__nombre">{nombreVisible}</span>
                   <span class="admin__rol">{ETIQUETA_ROL[usuario.rol]}</span>
                 </span>
               </div>
@@ -104,7 +112,6 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
             </div>
           )
         }
-        <p class="admin__nota">Cribado comunitario, no diagnóstico. Celdas con n &lt; 5 suprimidas.</p>
       </aside>
       <div class="admin__principal">
         <header class="admin__cabecera">
@@ -115,6 +122,7 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
         <main id="contenido" class="admin__contenido">
           <slot />
         </main>
+        <p class="admin__nota">Cribado comunitario, no diagnóstico. Las celdas con menos de 5 respuestas se ocultan.</p>
       </div>
     </div>
   </body>
@@ -179,6 +187,8 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
     grid-template-columns: 15rem minmax(0, 1fr);
     min-height: 100vh;
   }
+  /* Lateral del alto de la ventana y fijo al desplazar: el bloque de cuenta queda siempre abajo
+     a la misma distancia, sin importar lo larga que sea la página. */
   .admin__lateral {
     background: var(--color-superficie);
     border-right: 1px solid var(--color-borde);
@@ -186,6 +196,11 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
     display: flex;
     flex-direction: column;
     gap: var(--espacio-3);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
   }
   .admin__marca {
     display: flex;
@@ -203,9 +218,13 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
     flex-direction: column;
     gap: 2px;
   }
+  .admin__nav li {
+    margin: 0;
+  }
   .admin__nav a {
     display: block;
-    padding: 0.4rem 0.6rem;
+    padding: 0.42rem 0.65rem;
+    line-height: 1.35;
     border-radius: var(--radio);
     color: var(--color-texto);
     text-decoration: none;
@@ -303,7 +322,10 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
   .admin__nota {
     font-size: 0.8rem;
     color: var(--color-texto-suave);
-    margin: 0;
+    margin: var(--espacio-4) 0 0;
+    padding-top: var(--espacio-2);
+    border-top: 1px solid var(--color-borde);
+    max-width: none;
   }
   .admin__principal {
     padding: var(--espacio-4);
@@ -409,6 +431,10 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
   .tabla .suprimido {
     color: var(--color-texto-suave);
     font-style: italic;
+    white-space: nowrap;
+  }
+  .tabla td.num {
+    white-space: nowrap;
   }
   .viz {
     width: 100%;
@@ -455,6 +481,17 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
     color: var(--color-primario);
     font-size: 0.9rem;
   }
+  /* Ventanas bajas (portátiles pequeños): menú más compacto para que todo quepa sin scroll. */
+  @media (min-width: 56.01rem) and (max-height: 48rem) {
+    .admin__lateral {
+      gap: var(--espacio-2);
+      padding-block: var(--espacio-2);
+    }
+    .admin__nav a {
+      padding-block: 0.24rem;
+      font-size: 0.95rem;
+    }
+  }
   @media (max-width: 56rem) {
     .admin__marco {
       grid-template-columns: 1fr;
@@ -462,6 +499,9 @@ const iniciales = (nombre: string) => (nombre.trim()[0] ?? "?").toUpperCase();
     .admin__lateral {
       border-right: 0;
       border-bottom: 1px solid var(--color-borde);
+      position: static;
+      height: auto;
+      overflow: visible;
     }
     .admin__nav {
       flex-direction: row;
