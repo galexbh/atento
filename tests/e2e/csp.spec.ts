@@ -40,6 +40,19 @@ test.describe("CSP en la build", () => {
     expect(bloqueos).toEqual([]);
   });
 
+  test("ningún texto queda pegado a un enlace o negrita (compresión del HTML)", async ({
+    page,
+  }) => {
+    const pegados: string[] = [];
+    for (const ruta of PAGINAS) {
+      await page.goto(`${URL_BUILD}${ruta}`);
+      const html = (await page.content()).replace(/<(script|style)\b[\s\S]*?<\/\1>/g, "");
+      const patron = /([\p{L}0-9.,;:)])<(a|strong|em|code)\b[^>]*>([^<]{0,25})/gu;
+      for (const m of html.matchAll(patron)) pegados.push(`${ruta}: «${m[1]}${m[3]}»`);
+    }
+    expect(pegados).toEqual([]);
+  });
+
   test("el botón de tema alterna y recuerda la preferencia", async ({ page }) => {
     await page.goto(`${URL_BUILD}/`);
     const tema = () => page.evaluate(() => document.documentElement.dataset.theme ?? null);
