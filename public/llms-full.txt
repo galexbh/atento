@@ -43,13 +43,17 @@ Un resultado "con indicadores" no significa que el niño tenga TDAH. Un resultad
 
 **Qué se guarda de cada cuestionario.** Municipio (elegido por la persona), edad en años, sexo, quién responde (madre, padre, otro cuidador), las respuestas, la versión del cuestionario y la fecha. Nada más. No pedimos nombre, correo, teléfono ni fecha de nacimiento, y no guardamos la dirección IP de forma persistente.
 
-**Agregación.** El mapa agrupa los cuestionarios por **municipio** y por **periodo** (año calendario). Para cada municipio y año se calcula: número de cuestionarios (n), número con resultado "con indicadores" y el porcentaje que representan.
+**Agregación.** El mapa agrupa los cuestionarios por **departamento** y por **año calendario**; las tablas añaden el detalle por **municipio** cuando el año ya cerró. Para cada celda se calcula: número de cuestionarios (n), número con resultado "con indicadores" y el porcentaje que representan. Solo cuentan cuestionarios completos con permiso de investigación. No publicamos datos por mes ni por trimestre de un departamento o municipio; la única serie trimestral es el total nacional.
 
-**Supresión de municipios pequeños.** Si un municipio tiene **menos de 5 cuestionarios** en el periodo, no mostramos su porcentaje; aparece como "datos insuficientes". Con tan pocas respuestas el porcentaje no significa nada (una sola familia lo cambiaría de 0 % a 50 %) y además podría permitir que alguien dedujera quién respondió.
+**Supresión de celdas pequeñas.** Si un municipio, un departamento o un trimestre tiene **menos de 5 cuestionarios**, no mostramos ni el número ni el porcentaje; aparece como "menos de 5". Con tan pocas respuestas el porcentaje no significa nada (una sola familia lo cambiaría de 0 % a 50 %) y además podría permitir que alguien dedujera quién respondió.
+
+**Supresión complementaria.** Ocultar una celda no basta si se puede deducir restando: por ejemplo, el total de un departamento menos sus municipios visibles. Por eso, cuando lo oculto suma menos de 5, ocultamos también la siguiente celda más pequeña. Algunas celdas con 5 o más respuestas aparecen como "menos de 5*" por esta razón.
+
+**Año en curso.** Mientras el año no termina, publicamos una versión preliminar que solo incluye trimestres ya cerrados y solo departamentos. Se actualiza una vez por trimestre. El detalle por municipio aparece cuando el año cierra.
 
 **Intervalo de confianza.** Junto a cada porcentaje mostramos un rango (intervalo de confianza de Wilson al 95 %): es el margen dentro del cual estaría el porcentaje "real" de ese grupo de respuestas si se repitiera la recolección muchas veces, y es más ancho cuanto menos cuestionarios haya. Usamos el método de Wilson porque funciona bien con números pequeños y con porcentajes cercanos a 0 % o 100 %, donde el método clásico falla.
 
-**Escala de colores fija de 5 clases.** El color de cada municipio depende del porcentaje con indicadores:
+**Escala de colores fija de 5 clases.** El color de cada departamento depende del porcentaje con indicadores:
 
 | Clase | Porcentaje con indicadores |
 |---|---|
@@ -79,9 +83,9 @@ El título del mapa dirá siempre "Porcentaje de cuestionarios con indicadores" 
 
 ## Metodología: Históricos anuales y versionado de datos
 
-- Los datos se cierran por **año calendario**. Cada 31 de diciembre se congela el conjunto de ese año y se publica como una versión (por ejemplo `datos-2026-v1`) con fecha de corte y un código de verificación (hash) para que cualquiera pueda comprobar que no se ha modificado.
+- Los datos se cierran por **año calendario**. El 1 de enero se congela el año anterior y se publica como versión `v1` (archivo `atento-datos-2026-v1.csv`). Esa versión no se modifica: la base de datos lo impide.
 - Si se detecta un error y hay que corregir una versión ya publicada, se publica una nueva (`v2`) y se explica el cambio en un registro público; la versión anterior no se borra.
-- El mapa permite ver cada año por separado y la serie de un municipio a lo largo del tiempo. No se mezclan años salvo que se indique explícitamente.
+- El mapa permite ver cada año por separado y comparar un año con otro por departamento. No se mezclan años salvo que se indique explícitamente.
 - Cuando cambie la versión del cuestionario, los años con cuestionarios distintos se marcarán como "no directamente comparables".
 
 ## Metodología: Cómo citar
