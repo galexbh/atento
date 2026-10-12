@@ -7,6 +7,16 @@ se anotan además en la política de datos abiertos.
 
 ## [Unreleased]
 
+### Seguridad (2026-10-12, revisión interna)
+- Neutralizada la inyección de fórmulas CSV en exportaciones; `versionConsentimiento` con formato de fecha.
+- Microdatos: filtros finos prohibidos, umbral de recodificación sobre el universo, id seudonimizado por descarga, k-anonimato por cruce.
+- Supresión n<5 también en totales; auditoría de consultas; límites de granularidad para el rol investigador.
+- Verificación estricta de origen en POST de `/admin`; `worker-src` y `manifest-src` en la CSP.
+- `RATE_SALT` obligatoria en producción (HMAC de IP); `ADMIN_SESSION_SECRET` obligatorio; cierre global de sesiones.
+- PBKDF2 a 100 000 iteraciones (límite de Cloudflare Workers); Turnstile fail-closed fuera de local.
+- Cabeceras para estáticos, CI con permisos mínimos y auditoría de dependencias, triggers de validación en D1.
+- Botón "Borrar mis datos de este dispositivo" y caducidad del resultado a 30 días.
+
 ### Pendiente
 
 - Revisión clínica de los textos que ven las familias (cuestionario, resultado, avisos).
