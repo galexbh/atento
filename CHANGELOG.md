@@ -7,6 +7,10 @@ se anotan además en la política de datos abiertos.
 
 ## [Unreleased]
 
+### Turnstile (2026-10-12)
+- Widget real integrado en preview y producción; secreto validado y guardado sin exponerlo.
+- El servidor exige `action` y `hostname` además de `success`; tokens de hasta 2048 caracteres.
+
 ### Seguridad (2026-10-12, revisión interna)
 - Neutralizada la inyección de fórmulas CSV en exportaciones; `versionConsentimiento` con formato de fecha.
 - Microdatos: filtros finos prohibidos, umbral de recodificación sobre el universo, id seudonimizado por descarga, k-anonimato por cruce.

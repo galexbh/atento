@@ -117,6 +117,19 @@ pnpm exec wrangler secret put ADMIN_SESSION_SECRET    # obligatoria en producci�
 pnpm exec wrangler secret put ADMIN_PASSWORD_HASH     # solo ADMIN_MODO=password; hash PBKDF2 de 100 000 iteraciones
 ```
 
+### Turnstile
+
+- Widget: "atento.galexbh.dev (Spin)", modo administrado, clave de sitio `0x4AAAAAAFUM2SiQtialMd1m`.
+  Dominios permitidos: `atento.galexbh.dev`, `atento-preview.galexbh.dev`, `localhost`, `127.0.0.1`.
+- La clave de sitio está en `src/pages/cribado/cuestionario.astro` y se usa en cualquier build;
+  `astro dev` usa la clave de pruebas de Cloudflare. `PUBLIC_TURNSTILE_SITE_KEY` la sustituye.
+- El widget se renderiza con `action: "envio-respuesta"` y el servidor exige esa acción y que
+  `hostname` sea el host de `SITE_URL` (`localhost`/`127.0.0.1` solo con `ENTORNO=local`).
+- Rotar el secreto sin mostrarlo: leerlo con `wrangler turnstile widget get <sitekey> --json`
+  a una variable de shell, probarlo contra siteverify con un token ficticio (debe responder
+  `invalid-input-response`) y pasarlo por stdin a `wrangler secret put TURNSTILE_SECRET`
+  (y `--env preview`).
+
 El hash de `ADMIN_PASSWORD_HASH` se genera con `pnpm tsx scripts/hash-password.ts "contraseña"`.
 Usa 100 000 iteraciones PBKDF2: el runtime de Cloudflare Workers rechaza valores mayores
 (`NotSupportedError: iteration counts above 100000 are not supported`), así que un hash de 200 000
