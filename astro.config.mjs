@@ -36,7 +36,8 @@ export default defineConfig({
       filter: (url) => {
         const ruta = new URL(url).pathname;
         return (
-          !/\/(resultado|cribado|admin|api|offline)(\/|$)/.test(ruta) && !/^\/docente\/./.test(ruta)
+          !/\/(resultado|cribado|admin|api|offline|empezar)(\/|$)/.test(ruta) &&
+          !/^\/docente\/./.test(ruta)
         );
       },
       // Mismo formato que <link rel="canonical"> (sin barra final).

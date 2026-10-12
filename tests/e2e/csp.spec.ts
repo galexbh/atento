@@ -11,6 +11,7 @@ const URL_BUILD = process.env.E2E_URL;
 
 const PAGINAS = [
   "/",
+  "/empezar",
   "/cribado/consentimiento",
   "/cribado/datos",
   "/cribado/cuestionario",

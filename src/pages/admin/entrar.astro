@@ -5,6 +5,8 @@
  * mecanismo de acceso, la duración de la sesión ni los límites de intentos.
  */
 import "@/styles/global.css";
+import BotonTema from "@/components/BotonTema.astro";
+import TemaInicial from "@/components/TemaInicial.astro";
 import { autenticar, modoAdmin } from "@/lib/admin/proteger";
 import { procesarEntrar } from "@/lib/admin/sesion";
 
@@ -38,14 +40,18 @@ Astro.response.status = 401;
     <meta name="referrer" content="no-referrer" />
     <title>Acceso · Atento</title>
     <link rel="icon" href="/marca/favicon.svg" type="image/svg+xml" />
+    <TemaInicial />
   </head>
   <body class="acceso">
     <main class="acceso__marco">
       <section class="acceso__tarjeta" aria-labelledby="acceso-titulo">
-        <a class="acceso__marca" href="/" aria-label="Atento, ir al sitio">
-          <img src="/marca/simbolo.svg" alt="" width="48" height="48" />
-          <span>Atento</span>
-        </a>
+        <div class="acceso__superior">
+          <a class="acceso__marca" href="/" aria-label="Atento, ir al sitio">
+            <img src="/marca/simbolo.svg" alt="" width="48" height="48" />
+            <span>Atento</span>
+          </a>
+          <BotonTema />
+        </div>
 
         <h1 id="acceso-titulo">Acceso del equipo</h1>
         <p class="acceso__intro">Este espacio es solo para el equipo del proyecto.</p>
@@ -163,6 +169,14 @@ Astro.response.status = 401;
     padding: var(--espacio-5) var(--espacio-4);
   }
 
+  .acceso__superior {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-2);
+    margin-bottom: var(--espacio-4);
+  }
+
   .acceso__marca {
     display: inline-flex;
     align-items: center;
@@ -172,7 +186,6 @@ Astro.response.status = 401;
     font-weight: 800;
     font-size: 1.5rem;
     letter-spacing: -0.02em;
-    margin-bottom: var(--espacio-4);
   }
 
   .acceso__marca img {

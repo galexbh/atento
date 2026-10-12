@@ -1,0 +1,225 @@
+---
+/**
+ * Punto de entrada único al cribado: pregunta quién responde y envía al flujo de familia o al de
+ * docentes. Todos los botones "Empezar" del sitio llevan aquí.
+ */
+import { icono, ilustracion } from "@/components/svg";
+import Base from "@/layouts/Base.astro";
+
+const opciones = [
+  {
+    href: "/cribado/consentimiento",
+    ilus: "elegir-familia",
+    titulo: "Soy madre, padre o cuidador",
+    texto:
+      "Respondes sobre tu hijo, hija o el niño que cuidas. Al final ves una orientación clara.",
+    detalle: "Unos 10 minutos",
+  },
+  {
+    href: "/docente",
+    ilus: "elegir-docente",
+    titulo: "Soy docente",
+    texto:
+      "La familia te pidió tu mirada desde el aula. Al final obtienes una hoja para entregarle.",
+    detalle: "De 5 a 8 minutos",
+  },
+];
+---
+
+<Base
+  titulo="¿Quién responde? · Atento"
+  descripcion="Elige si respondes como familia o como docente para empezar el cribado."
+  noindex
+>
+  <section class="contenedor contenedor--ancho elegir" aria-labelledby="elegir-titulo">
+    <header class="elegir__cabecera">
+      <p class="elegir__antetitulo">Empezar el cribado</p>
+      <h1 id="elegir-titulo">¿Quién va a responder?</h1>
+      <p class="elegir__sub">
+        Las preguntas cambian según quién observa al niño o la niña. Elige la opción que te
+        describe.
+      </p>
+    </header>
+
+    <ul class="elegir__opciones" role="list">
+      {
+        opciones.map((o) => (
+          <li>
+            <a class="opcion" href={o.href}>
+              <span
+                class="opcion__ilus"
+                set:html={ilustracion(o.ilus, { decorativo: true, clase: "ilustracion" })}
+              />
+              <span class="opcion__cuerpo">
+                <span class="opcion__titulo">{o.titulo}</span>
+                <span class="opcion__texto">{o.texto}</span>
+                <span class="opcion__pie">
+                  <span class="opcion__tiempo">
+                    <Fragment set:html={icono("tiempo")} />
+                    {o.detalle}
+                  </span>
+                  <span class="opcion__ir" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+                  </span>
+                </span>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="elegir__nota">
+      Es gratis y anónimo. No pedimos nombres, correos ni cuentas.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .elegir {
+    padding-block: var(--espacio-5) var(--espacio-6);
+  }
+  .elegir__cabecera {
+    text-align: center;
+    max-width: 40rem;
+    margin: 0 auto var(--espacio-5);
+  }
+  .elegir__cabecera p {
+    margin-inline: auto;
+  }
+  .elegir__antetitulo {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primario-fuerte);
+    margin-bottom: var(--espacio-2);
+  }
+  .elegir h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 0 0 var(--espacio-3);
+  }
+  .elegir__sub {
+    font-size: 1.15rem;
+    color: var(--color-texto-suave);
+  }
+  .elegir__opciones {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    max-width: none;
+    display: grid;
+    gap: var(--espacio-4);
+  }
+  .elegir__opciones li + li {
+    margin-top: 0;
+  }
+  .opcion {
+    display: grid;
+    height: 100%;
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    color: var(--color-texto);
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow: var(--sombra-1);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      border-color 0.18s ease;
+  }
+  .opcion:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sombra-2);
+    border-color: var(--color-primario);
+  }
+  .opcion:focus-visible {
+    outline: 3px solid var(--color-foco);
+    outline-offset: 3px;
+  }
+  .opcion__ilus {
+    display: grid;
+    place-items: center;
+    background: var(--color-superficie-2);
+    padding: var(--espacio-3) var(--espacio-3) 0;
+  }
+  .opcion__ilus :global(svg) {
+    width: 100%;
+    max-width: 22rem;
+    height: auto;
+  }
+  .opcion__cuerpo {
+    display: grid;
+    gap: var(--espacio-2);
+    padding: var(--espacio-4);
+  }
+  .opcion__titulo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .opcion__texto {
+    color: var(--color-texto-suave);
+  }
+  .opcion__pie {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--espacio-2);
+  }
+  .opcion__tiempo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-texto-suave);
+  }
+  .opcion__tiempo :global(svg) {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .opcion__ir {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    transition: transform 0.18s ease;
+  }
+  .opcion__ir svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .opcion:hover .opcion__ir {
+    transform: translateX(3px);
+  }
+  .elegir__nota {
+    text-align: center;
+    margin: var(--espacio-5) auto 0;
+    color: var(--color-texto-suave);
+  }
+  @media (min-width: 48rem) {
+    .elegir__opciones {
+      grid-template-columns: 1fr 1fr;
+      max-width: 60rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .opcion,
+    .opcion__ir {
+      transition: none;
+    }
+    .opcion:hover,
+    .opcion:hover .opcion__ir {
+      transform: none;
+    }
+  }
+</style>

@@ -1,6 +1,8 @@
 ---
 import "@/styles/global.css";
 import Filtros from "@/components/admin/Filtros.astro";
+import BotonTema from "@/components/BotonTema.astro";
+import TemaInicial from "@/components/TemaInicial.astro";
 import type { Usuario } from "@/lib/admin/proteger";
 import { modoAdmin } from "@/lib/admin/proteger";
 import type { Filtros as TipoFiltros } from "@/lib/reportes/filtros";
@@ -46,6 +48,7 @@ const consulta = Astro.url.search;
     <meta name="robots" content="noindex, nofollow" />
     <title>{titulo} · Panel Atento</title>
     <link rel="icon" href="/marca/favicon.svg" type="image/svg+xml" />
+    <TemaInicial />
   </head>
   <body class="admin">
     <a class="salto-contenido" href="#contenido">Ir al contenido</a>
@@ -90,6 +93,7 @@ const consulta = Astro.url.search;
             </div>
           )
         }
+        <BotonTema clase="admin__tema">Cambiar tema</BotonTema>
         <p class="admin__nota">Cribado comunitario, no diagnóstico. Celdas con n &lt; 5 suprimidas.</p>
       </aside>
       <div class="admin__principal">
@@ -203,6 +207,10 @@ const consulta = Astro.url.search;
     background: var(--color-primario);
     color: var(--color-primario-contraste);
     font-weight: 600;
+  }
+  .admin__lateral :global(.admin__tema) {
+    margin-top: var(--espacio-3);
+    align-self: flex-start;
   }
   .admin__usuario {
     margin-top: auto;

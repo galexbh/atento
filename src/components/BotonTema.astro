@@ -1,0 +1,75 @@
+---
+/** Botón para alternar modo claro y oscuro (comparte la preferencia con el resto del sitio). */
+interface Props {
+  clase?: string;
+}
+const { clase = "" } = Astro.props;
+---
+
+<button type="button" class:list={["boton-tema", clase]} data-boton-tema aria-label="Cambiar entre modo claro y oscuro">
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path class="boton-tema__sol" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m0-11.32L4.93 4.93m14.14 14.14-1.41-1.41"></path>
+    <circle class="boton-tema__sol" cx="12" cy="12" r="4"></circle>
+    <path class="boton-tema__luna" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"></path>
+  </svg>
+  <span class="boton-tema__texto"><slot /></span>
+</button>
+
+<script>
+  import { alternarTema } from "@/lib/cliente/tema";
+  for (const boton of document.querySelectorAll<HTMLButtonElement>("[data-boton-tema]")) {
+    boton.addEventListener("click", alternarTema);
+  }
+</script>
+
+<style>
+  .boton-tema {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    justify-content: center;
+    padding: 0 0.6rem;
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: 999px;
+    background: var(--color-superficie);
+    color: var(--color-texto);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .boton-tema:hover {
+    border-color: var(--color-primario);
+  }
+  .boton-tema:focus-visible {
+    outline: 3px solid var(--color-foco);
+    outline-offset: 2px;
+  }
+  .boton-tema svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+  }
+  .boton-tema__texto:empty {
+    display: none;
+  }
+  .boton-tema__luna {
+    display: none;
+  }
+  :global(:root[data-theme="dark"]) .boton-tema__sol {
+    display: none;
+  }
+  :global(:root[data-theme="dark"]) .boton-tema__luna {
+    display: inline;
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .boton-tema__sol {
+      display: none;
+    }
+    :global(:root:not([data-theme="light"])) .boton-tema__luna {
+      display: inline;
+    }
+  }
+</style>

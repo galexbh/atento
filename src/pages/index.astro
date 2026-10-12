@@ -110,7 +110,7 @@ const faq = [
           Para madres, padres, cuidadores y docentes de niñas y niños de <strong>6 a 12 años</strong> en Honduras. Diez minutos. Sin nombre, sin cuenta.
         </p>
         <div class="hero__acciones">
-          <a href="/cribado/consentimiento" class="boton boton--primario boton--grande">
+          <a href="/empezar" class="boton boton--primario boton--grande">
             Empezar el cribado
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg>
           </a>
@@ -133,8 +133,7 @@ const faq = [
         </p>
         <p>
           Usa la escala NICHQ Vanderbilt, la misma que emplean pediatras en muchos países, con
-          preguntas en español claro. El resultado se calcula en tu teléfono y te lo mostramos al
-          instante.
+          preguntas en español claro.
         </p>
       </div>
       <div class="aviso aviso--importante no-es">
@@ -184,19 +183,10 @@ const faq = [
         </ul>
         <p><a href="/legal/privacidad">Lee la política de privacidad completa</a></p>
       </div>
-      <figure class="foto">
-        <picture>
-          <source media="(max-width: 48rem)" srcset="/img/nino-tarea-800.webp" />
-          <img
-            src="/img/nino-tarea.webp"
-            alt="Una niña hace la tarea en un cuaderno, vista desde arriba"
-            width="1600"
-            height="1067"
-            loading="lazy"
-            decoding="async"
-          />
-        </picture>
-      </figure>
+      <div
+        class="privacidad__ilus"
+        set:html={ilustracion("privacidad-escudo", { decorativo: true, clase: "ilustracion" })}
+      />
     </div>
   </section>
 
@@ -239,8 +229,7 @@ const faq = [
       <div>
         <h2 id="cierre-titulo">¿Listo para empezar?</h2>
         <p>Diez minutos, sin registro. Puedes parar y seguir después: tu avance se guarda en tu teléfono.</p>
-        <a href="/cribado/consentimiento" class="boton boton--primario boton--grande">Empezar el cribado</a>
-        <p class="suave">¿Eres docente y una familia te pidió responder? Usa la <a href="/docente">versión para docentes</a>.</p>
+        <a href="/empezar" class="boton boton--primario boton--grande">Empezar el cribado</a>
       </div>
     </div>
   </section>
@@ -398,6 +387,15 @@ const faq = [
   }
   .pasos--tres {
     gap: var(--espacio-4);
+  }
+  .privacidad__ilus {
+    display: grid;
+    place-items: center;
+  }
+  .privacidad__ilus :global(svg) {
+    width: 100%;
+    max-width: 30rem;
+    height: auto;
   }
   .privacidad__icono {
     margin-bottom: var(--espacio-3);
