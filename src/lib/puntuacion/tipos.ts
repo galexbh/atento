@@ -79,7 +79,9 @@ export interface ResultadoEscala {
   positivosCriterio: number;
   /** Mínimo de positivosCriterio para que la escala sea positiva. */
   umbral: number;
-  /** Verdadero si positivosCriterio ≥ umbral y no faltan >20 % de ítems. */
+  /** Falso si faltan demasiados ítems (ver `escalaCompleta`) o la escala no tiene ítems. */
+  completa: boolean;
+  /** Verdadero si la escala está completa y positivosCriterio ≥ umbral. */
   positivo: boolean;
 }
 
@@ -96,6 +98,10 @@ export interface Resultado {
   alertas: EscalaAlerta[];
   /** Ids de ítems del instrumento sin respuesta. */
   itemsFaltantes: string[];
+  /** Escalas con ítems que quedaron incompletas por faltantes. */
+  escalasIncompletas: Escala[];
+  /** Falso si inatención e hiperactividad están incompletas: no se entrega nivel. */
+  nivelEntregable: boolean;
 }
 
 export interface EntradaPuntuacion {

@@ -99,13 +99,15 @@ Vanderbilt no publica una regla de imputación. Proponemos la siguiente, conserv
 |---|---|
 | Faltan ítems en una subescala de síntomas (1–9 o 10–18) | Si faltan **≤ 1** ítem: se puntúa con los presentes (un ítem faltante cuenta como 0). Si faltan **≥ 2**: la subescala se marca `incompleta`; no se puede declarar positiva. |
 | Faltan ítems en oposición, conducta o ansiedad/depresión | Mismo criterio: ≤ 1 faltante se tolera (cuenta como 0); ≥ 2 marca la subescala `incompleta` y la alerta no se evalúa. |
-| Faltan ítems de desempeño | Se evalúa con los presentes. Si faltan **≥ 4** de 8, `desempeno` se marca `incompleto`. "No aplica" en hermanos (53) o actividades (55) **no** cuenta como faltante. |
+| Faltan ítems de desempeño | Se evalúa con los presentes. Si falta **la mitad o más** de los ítems, `desempeno` se marca `incompleto`: 4 de 7 en el formulario de padres en español y 4 de 8 en el docente. El formulario no ofrece la opción "no aplica"; si se añadiera, no contaría como faltante. |
 | Cualquier subescala de síntomas `incompleta` | El nivel se calcula igual, pero el resultado muestra la nota "Algunas preguntas quedaron sin responder; el resultado puede ser menos preciso". |
 | Ambas subescalas de síntomas `incompletas` | No se entrega nivel. Se pide completar el cuestionario. |
 
 Motivo de "faltante cuenta como 0": en un cribado preferimos no inflar positivos por imputación. El costo es perder algo de sensibilidad, que ya es el punto débil del informante único. El asesor puede proponer lo contrario.
 
 El formulario debe, en todo caso, pedir todas las respuestas antes de enviar y señalar las vacías. Las reglas anteriores son para casos de envío parcial.
+
+**Implementación.** La regla está en `src/lib/puntuacion/puntuar.ts` (`escalaCompleta`, `nivelEntregable`). El servidor rechaza un envío marcado como completo sin nivel entregable y el cuestionario pide completar las respuestas en lugar de mostrar un resultado.
 
 ## 6. Por qué no se usa la suma total como corte
 

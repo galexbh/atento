@@ -80,6 +80,14 @@ export function iniciarCuestionario(raiz: HTMLElement): void {
 
       // 1) Resultado en cliente (siempre).
       const resultado = puntuar({ instrumentoId, respuestas: principal });
+      if (!resultado.nivelEntregable) {
+        // Regla de faltantes (docs/02-instrumento/puntuacion.md §5): sin nivel si las dos escalas
+        // de síntomas quedaron incompletas. El formulario exige todo, así que es un caso extremo.
+        estado(
+          "Faltan respuestas en varias preguntas sobre atención y actividad. Vuelve atrás, complétalas y verás tu resultado.",
+        );
+        return null;
+      }
       const faltanNucleo = [resultado.escalas.inatencion, resultado.escalas.hiperactividad].filter(
         (e) => e.total - e.respondidos > 0,
       ).length;

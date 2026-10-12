@@ -46,6 +46,47 @@ describe("puntuar – umbrales Vanderbilt", () => {
     expect(r.escalas.inatencion.puntaje).toBe(9);
     expect(r.escalas.inatencion.positivosCriterio).toBe(0);
     expect(r.escalas.inatencion.positivo).toBe(false);
+    expect(r.escalas.inatencion.completa).toBe(true);
+  });
+
+  it("conducta (14 ítems): 1 faltante se tolera, 2 la dejan incompleta y sin alerta", () => {
+    const resp = marcar(base(), "conducta", 3, 3);
+    const ids = instrumento.items.filter((i) => i.escala === "conducta").map((i) => i.id);
+    delete resp[ids[13] as string];
+    let r = puntuar({ instrumentoId: ID, respuestas: resp });
+    expect(r.escalas.conducta.positivo).toBe(true);
+    expect(r.alertas).toContain("conducta");
+    delete resp[ids[12] as string];
+    r = puntuar({ instrumentoId: ID, respuestas: resp });
+    expect(r.escalas.conducta.completa).toBe(false);
+    expect(r.escalas.conducta.positivo).toBe(false);
+    expect(r.alertas).not.toContain("conducta");
+  });
+
+  it("desempeño: incompleto solo si falta la mitad o más", () => {
+    const ids = instrumento.items.filter((i) => i.escala === "desempeno").map((i) => i.id);
+    const resp = base();
+    resp[ids[0] as string] = 5;
+    for (const id of ids.slice(1, 4)) delete resp[id];
+    let r = puntuar({ instrumentoId: ID, respuestas: resp });
+    expect(r.escalas.desempeno.total - r.escalas.desempeno.respondidos).toBe(3);
+    expect(r.escalas.desempeno.completa).toBe(ids.length > 6);
+    delete resp[ids[4] as string];
+    r = puntuar({ instrumentoId: ID, respuestas: resp });
+    expect(r.escalas.desempeno.completa).toBe(false);
+    expect(r.escalas.desempeno.positivo).toBe(false);
+  });
+
+  it("sin nivel entregable si inatención e hiperactividad están incompletas", () => {
+    const resp = base();
+    for (const escala of ["inatencion", "hiperactividad"] as const) {
+      const ids = instrumento.items.filter((i) => i.escala === escala).map((i) => i.id);
+      delete resp[ids[0] as string];
+      delete resp[ids[1] as string];
+    }
+    const r = puntuar({ instrumentoId: ID, respuestas: resp });
+    expect(r.nivelEntregable).toBe(false);
+    expect(r.escalasIncompletas).toEqual(expect.arrayContaining(["inatencion", "hiperactividad"]));
   });
 
   it("desempeño positivo con un solo ítem en 4 y sin síntomas → nivel bajo", () => {
@@ -138,9 +179,9 @@ describe("puntuar – nivel (regla Atento)", () => {
 });
 
 describe("puntuar – faltantes y errores", () => {
-  it("faltantes ≤20 % no invalidan la escala", () => {
+  it("1 faltante en una escala de síntomas se tolera (cuenta como 0)", () => {
     const resp = marcar(base(), "inatencion", 9, 3);
-    delete resp.V09; // 1 de 9 ≈ 11 %
+    delete resp.V09;
     const r = puntuar({ instrumentoId: ID, respuestas: resp });
     expect(r.itemsFaltantes).toEqual(["V09"]);
     expect(r.escalas.inatencion.respondidos).toBe(8);
@@ -148,15 +189,18 @@ describe("puntuar – faltantes y errores", () => {
     expect(r.escalas.inatencion.positivo).toBe(true);
   });
 
-  it("faltantes >20 % marcan positivo=false aunque se alcance el umbral", () => {
+  it("2 faltantes dejan la escala incompleta: no es positiva aunque alcance el umbral", () => {
     const resp = marcar(base(), "inatencion", 9, 3);
     delete resp.V08;
-    delete resp.V09; // 2 de 9 ≈ 22 %
+    delete resp.V09;
     const r = puntuar({ instrumentoId: ID, respuestas: resp });
     expect(r.itemsFaltantes).toEqual(["V08", "V09"]);
     expect(r.escalas.inatencion.respondidos).toBe(7);
     expect(r.escalas.inatencion.positivosCriterio).toBe(7);
     expect(r.escalas.inatencion.positivo).toBe(false);
+    expect(r.escalas.inatencion.completa).toBe(false);
+    expect(r.escalasIncompletas).toContain("inatencion");
+    expect(r.nivelEntregable).toBe(true);
   });
 
   it("sin respuestas: lista todos los ítems como faltantes y no falla", () => {
@@ -276,12 +320,11 @@ describe("puntuar – vanderbilt-docente-es-1.0 (reglas de la fuente)", () => {
     expect(p(marcarDocente(baseDocente(), "hiperactividad", 9, 3)).nivel).toBe("moderado");
   });
 
-  it("faltantes: 2 de 10 en conducta (20 %) se toleran; 3 (30 %) anulan la positividad", () => {
+  it("docente: 1 faltante en oposición/conducta se tolera; 2 anulan la positividad", () => {
     const r = marcarDocente(baseDocente(), "conducta", 3, 3);
-    delete r.T27;
     delete r.T28;
     expect(p(r).escalas.conducta.positivo).toBe(true);
-    delete r.T26;
+    delete r.T27;
     expect(p(r).escalas.conducta.positivo).toBe(false);
   });
 

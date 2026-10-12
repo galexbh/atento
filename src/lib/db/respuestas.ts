@@ -95,8 +95,17 @@ export function serializarItems(envio: Envio): string {
 }
 
 /** Puntúa en servidor y construye la fila. `creado_en` es la fecha UTC sin hora. */
+/** Un envío marcado como completo sin nivel entregable (ver `Resultado.nivelEntregable`). */
+export class CuestionarioIncompleto extends Error {
+  constructor() {
+    super("cuestionario incompleto: faltan respuestas en ambas escalas de síntomas");
+    this.name = "CuestionarioIncompleto";
+  }
+}
+
 export function construirFila(envio: Envio, ahora: Date = new Date()): FilaRespuestaNueva {
   const r = puntuar({ instrumentoId: envio.instrumentoId, respuestas: envio.respuestas });
+  if (envio.completado && !r.nivelEntregable) throw new CuestionarioIncompleto();
   const fecha = ahora.toISOString().slice(0, 10);
   const e = r.escalas;
   return {

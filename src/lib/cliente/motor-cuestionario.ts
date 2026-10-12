@@ -59,10 +59,11 @@ export interface OpcionesMotor {
   /** Mensaje si Turnstile no carga. */
   textoErrorTurnstile: string;
   /**
-   * Calcula, guarda y (si corresponde) envía. Devuelve la URL a la que navegar al terminar.
+   * Calcula, guarda y (si corresponde) envía. Devuelve la URL a la que navegar al terminar, o
+   * `null` para quedarse en la página (p. ej. faltan respuestas y no se puede entregar nivel).
    * El motor ya comprobó el token de Turnstile y deshabilitó el botón.
    */
-  alEnviar: (contexto: ContextoEnvio) => Promise<string>;
+  alEnviar: (contexto: ContextoEnvio) => Promise<string | null>;
 }
 
 /** POST a /api/respuesta. Verdadero solo si el servidor respondió 2xx. */
@@ -318,6 +319,7 @@ export function iniciarMotorCuestionario(raiz: HTMLElement, opciones: OpcionesMo
       },
     });
     botonEnviar.disabled = false;
+    if (destino === null) return;
     terminado = true;
     window.clearInterval(temporizador);
     opciones.progreso.borrar();

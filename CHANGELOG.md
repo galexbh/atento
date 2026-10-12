@@ -7,6 +7,9 @@ se anotan además en la política de datos abiertos.
 
 ## [Unreleased]
 
+### Ítems faltantes unificados (2026-10-12)
+- La puntuación sigue la regla del documento de puntuación: hasta 1 faltante por escala de síntomas o comorbilidad; desempeño incompleto si falta la mitad o más; sin nivel si las dos escalas de síntomas quedan incompletas.
+
 ### Versión para docentes (2026-10-12)
 - Nuevo instrumento `vanderbilt-docente-es-1.0`: NICHQ Vanderbilt Assessment Scale – Teacher Informant, 1.ª edición (2002), versión en español (© 2005, OHSU como fuente), 43 ítems `T01–T43` verificados contra la fuente; reglas de NICHQ (inatención e hiperactividad ≥ 6 de 9, oposición/conducta combinada ≥ 3 de 10 guardada en `conducta`, ansiedad/depresión ≥ 3 de 7, desempeño ≥ 1 ítem con 4–5). Detalle y dudas para el asesor en `docs/02-instrumento/version-docente.md`.
 - Flujo `/docente` (presentación indexable) → consentimiento docente (versión `2026-10-12`) → datos de la escuela → cuestionario (7 páginas) → hoja imprimible con el resumen de SUS respuestas, sin nivel ni interpretación. Sin la casilla de investigación no se envía nada.

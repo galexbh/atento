@@ -188,6 +188,16 @@ describe("POST /api/respuesta", () => {
     expect(llamadasSiteverify).toHaveLength(0);
   });
 
+  it("completo pero sin nivel entregable (faltan 2 en ambas escalas de síntomas) -> 400", async () => {
+    const envio = envioValido();
+    const respuestas = { ...(envio.respuestas as Record<string, number>) };
+    for (const id of ["V01", "V02", "V10", "V11"]) delete respuestas[id];
+    const r = await enviar({ ...envio, respuestas }, { ip: "198.51.100.71" });
+    expect(r.status).toBe(400);
+    expect((await r.json<{ motivo: string }>()).motivo).toBe("incompleto");
+    expect(llamadasSiteverify).toHaveLength(0);
+  });
+
   it("Turnstile con acción de otra superficie -> 403", async () => {
     vi.unstubAllGlobals();
     mockSiteverify(true, { action: "otra-accion" });

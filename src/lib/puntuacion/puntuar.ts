@@ -54,8 +54,11 @@ export interface ReglasInstrumento {
   minimoCriterioFrecuencia: number;
   /** Valor mínimo de un ítem de desempeño para contar como criterio. */
   minimoCriterioDesempeno: number;
-  /** Proporción máxima de ítems faltantes por escala (exclusivo) para poder ser positiva. */
-  maxProporcionFaltantes: number;
+  /**
+   * Faltantes tolerados en escalas de frecuencia (síntomas y comorbilidad). Con más, la escala
+   * queda incompleta y no puede ser positiva. Ver `docs/02-instrumento/puntuacion.md` §5.
+   */
+  maxFaltantesFrecuencia: number;
 }
 
 const REGLAS_VANDERBILT: ReglasInstrumento = {
@@ -69,7 +72,7 @@ const REGLAS_VANDERBILT: ReglasInstrumento = {
   },
   minimoCriterioFrecuencia: 2,
   minimoCriterioDesempeno: 4,
-  maxProporcionFaltantes: 0.2,
+  maxFaltantesFrecuencia: 1,
 };
 
 /**
@@ -116,8 +119,8 @@ export function obtenerReglas(instrumentoId: string): ReglasInstrumento {
  *   umbral−2 y umbral−1, es decir 4–5 de 9 en Vanderbilt) y desempeño positivo.
  * - bajo: todo lo demás.
  *
- * Nota: una escala con >20 % de ítems faltantes nunca es positiva, pero sí
- * puede contar como "casi positiva" por sus ítems respondidos.
+ * Nota: un ítem faltante cuenta como 0. Una escala incompleta nunca es positiva,
+ * pero sí puede contar como "casi positiva" por sus ítems respondidos.
  */
 export function calcularNivel(escalas: Record<Escala, ResultadoEscala>): Nivel {
   const nucleo = [escalas.inatencion, escalas.hiperactividad];
@@ -131,6 +134,22 @@ export function calcularNivel(escalas: Record<Escala, ResultadoEscala>): Nivel {
   if (sintomasPositivos) return "moderado";
   if (casiPositiva && desempenoPositivo) return "moderado";
   return "bajo";
+}
+
+/**
+ * Una escala sin ítems (p. ej. `oposicion` en el formulario docente) nunca está completa.
+ * Desempeño: incompleto si falta la mitad de sus ítems o más (4 de 8, 4 de 7).
+ * Frecuencia: incompleta con más de `maxFaltantesFrecuencia` faltantes.
+ */
+export function escalaCompleta(
+  escala: Escala,
+  total: number,
+  faltantes: number,
+  reglas: ReglasInstrumento,
+): boolean {
+  if (total === 0) return false;
+  if (escala === "desempeno") return faltantes * 2 < total;
+  return faltantes <= reglas.maxFaltantesFrecuencia;
 }
 
 function validarValor(itemId: string, tipo: TipoItem, valor: unknown): number {
@@ -151,9 +170,12 @@ function validarValor(itemId: string, tipo: TipoItem, valor: unknown): number {
 /**
  * Puntúa las respuestas de un instrumento.
  *
- * - Ítems sin respuesta no fallan: se listan en `itemsFaltantes` y se
- *   cuentan solo los respondidos. Si faltan más del 20 % de una escala,
- *   esa escala se marca `positivo = false`.
+ * - Ítems sin respuesta no fallan: se listan en `itemsFaltantes` y cuentan
+ *   como 0. Regla de `docs/02-instrumento/puntuacion.md` §5:
+ *   - escalas de frecuencia: con 2 o más faltantes la escala queda incompleta;
+ *   - desempeño: queda incompleto si falta la mitad de sus ítems o más;
+ *   - una escala incompleta no puede ser positiva (ni generar alerta);
+ *   - si inatención e hiperactividad están incompletas, `nivelEntregable = false`.
  * - Valores fuera de rango, no enteros, o ids de ítems que no pertenecen
  *   al instrumento lanzan `Error` con un mensaje claro.
  */
@@ -178,6 +200,7 @@ export function puntuar(entrada: EntradaPuntuacion): Resultado {
       puntaje: 0,
       positivosCriterio: 0,
       umbral: reglas.umbrales[escala],
+      completa: false,
       positivo: false,
     });
   }
@@ -204,22 +227,23 @@ export function puntuar(entrada: EntradaPuntuacion): Resultado {
   const escalas = {} as Record<Escala, ResultadoEscala>;
   for (const escala of ESCALAS) {
     const r = acumulado.get(escala) as ResultadoEscala;
-    const faltantes = r.total - r.respondidos;
-    const demasiadosFaltantes =
-      r.total === 0 || faltantes / r.total > reglas.maxProporcionFaltantes;
-    r.positivo = !demasiadosFaltantes && r.positivosCriterio >= r.umbral;
+    r.completa = escalaCompleta(escala, r.total, r.total - r.respondidos, reglas);
+    r.positivo = r.completa && r.positivosCriterio >= r.umbral;
     escalas[escala] = r;
   }
 
   const combinado = escalas.inatencion.positivo && escalas.hiperactividad.positivo;
   const alertas = ESCALAS_ALERTA.filter((e) => escalas[e].positivo);
+  const escalasIncompletas = ESCALAS.filter((e) => escalas[e].total > 0 && !escalas[e].completa);
 
   return {
     instrumentoId: instrumento.id,
     escalas,
     combinado,
     nivel: calcularNivel(escalas),
+    nivelEntregable: escalas.inatencion.completa || escalas.hiperactividad.completa,
     alertas,
     itemsFaltantes,
+    escalasIncompletas,
   };
 }

@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 import { error, formatearErrores, ipDelCliente, json, registrar } from "@/lib/api/http";
 import { consumirIntento, faltaSal } from "@/lib/api/limite-tasa";
 import { verificarTurnstile } from "@/lib/api/turnstile";
-import { construirFila, insertarRespuesta } from "@/lib/db/respuestas";
+import { CuestionarioIncompleto, construirFila, insertarRespuesta } from "@/lib/db/respuestas";
 import { obtenerInstrumento } from "@/lib/puntuacion/instrumentos";
 import { EsquemaEnvio } from "@/lib/validacion/respuesta";
 
@@ -79,7 +79,8 @@ export const POST: APIRoute = async ({ request }) => {
   let fila: ReturnType<typeof construirFila>;
   try {
     fila = construirFila(envio);
-  } catch {
+  } catch (e) {
+    if (e instanceof CuestionarioIncompleto) return responder(error(400, "incompleto"));
     return responder(error(400, "puntuacion"));
   }
 
