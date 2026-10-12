@@ -69,6 +69,10 @@ jobs:
             echo "ADMIN_PASSWORD_HASH=$HASH"
             echo "ADMIN_SESSION_SECRET=secreto-de-sesion-ci"
           } > .dev.vars
+      - name: Migraciones y datos sintéticos en la D1 local
+        run: |
+          pnpm db:migrate:local
+          pnpm exec wrangler d1 execute atento-db --local --file scripts/seed-admin.sql
       - run: pnpm test:e2e
         env:
           CI: "true"
