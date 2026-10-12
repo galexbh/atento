@@ -111,8 +111,20 @@ const ruta = Astro.url.pathname;
     color: var(--color-texto-suave);
   }
   .filtros__campo--check label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
     color: var(--color-texto);
-    padding-bottom: 0.3rem;
+    cursor: pointer;
+  }
+  .filtros__campo--check input[type="checkbox"] {
+    min-width: 0;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--color-primario);
   }
   .filtros input,
   .filtros select {

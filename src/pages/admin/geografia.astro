@@ -94,8 +94,12 @@ const enlaceMetrica = (m: string) => {
     <p class="panel__nota">
       Métrica del mapa:{" "}
       <a href={enlaceMetrica("positivo")} style={metrica === "positivo" ? "font-weight:700" : ""}>positivo</a> ·
-      <a href={enlaceMetrica("combinado")} style={metrica === "combinado" ? "font-weight:700" : ""}>combinado</a>.
-      Total del periodo: n = {fmtCelda(conteo(datos.total.n))}, positivo {fmtPctIc(datos.total.positivo)}.
+      <a href={enlaceMetrica("combinado")} style={metrica === "combinado" ? "font-weight:700" : ""}>combinado</a>.{" "}
+      {
+        conteo(datos.total.n).suprimido
+          ? "Total del periodo: menos de 5 respuestas, por eso no se muestran porcentajes."
+          : `Total del periodo: ${fmtCelda(conteo(datos.total.n))} respuestas, ${fmtPctIc(datos.total.positivo)} con cribado positivo.`
+      }
     </p>
     <Mapa titulo={`% cribado ${metrica} por departamento · ${etiquetaPeriodo(filtros.periodo)}`} departamentos={datos.departamentos} metrica={metrica} />
   </section>
