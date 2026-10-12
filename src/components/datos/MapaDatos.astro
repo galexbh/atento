@@ -1,0 +1,192 @@
+---
+import { CLASES } from "@/lib/publico/datos";
+import {
+  claseRelleno,
+  describirCelda,
+  type FilaDepto,
+  fmtPp,
+  type Modo,
+} from "@/lib/publico/vista";
+/**
+ * Mapa coroplético público por departamento (public/ilustraciones/honduras.svg, ids d-01…d-18),
+ * coloreado en servidor: cada departamento recibe una clase de relleno (`dv-pct-*`, `dv-n-*`,
+ * `dv-dif-*`, `dv-suprimido` con trama o `dv-vacio`) cuyos colores son tokens de global.css.
+ * Cada departamento es un enlace a su fila de la tabla (funciona sin JavaScript y con teclado)
+ * con <title> y aria-label que dan nombre, n, % e IC95. La mejora progresiva (Informe.astro)
+ * muestra una tarjeta de detalle sin saltar.
+ */
+import mapaSvg from "../../../public/ilustraciones/honduras.svg?raw";
+
+interface Props {
+  filas: FilaDepto[];
+  modo: Modo;
+  anio: number;
+  anioComparar: number | null;
+}
+
+const { filas, modo, anio, anioComparar } = Astro.props;
+const porCodigo = new Map(filas.map((f) => [f.codigo, f]));
+
+const titulo =
+  modo === "n"
+    ? `Respuestas por departamento, ${anio}`
+    : modo === "comparar"
+      ? `Cambio en el % con indicadores, ${anio} frente a ${anioComparar}`
+      : `Porcentaje de cuestionarios con indicadores por departamento, ${anio}`;
+
+function escapar(t: string): string {
+  return t
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function detalle(f: FilaDepto): string {
+  const base = describirCelda(f.nombre, f.celda);
+  if (modo !== "comparar") return base;
+  const otro = `${anioComparar}`;
+  if (f.diferencia !== null) return `${base}. Cambio frente a ${otro}: ${fmtPp(f.diferencia)}`;
+  if (!f.celda || !f.comparada) return `${base}. Sin datos de ambos años para comparar`;
+  return `${base}. No se compara: dato suprimido en alguno de los dos años`;
+}
+
+let svg = mapaSvg.replace(/<title id="hn-titulo">[^<]*<\/title>/, "");
+svg = svg.replace(/<svg /, `<svg class="mapa-datos__svg" `);
+svg = svg.replace(/role="img"/, `role="group"`);
+svg = svg.replace(/aria-labelledby="hn-titulo"/, `aria-labelledby="mapa-datos-titulo"`);
+svg = svg.replace(
+  /<path id="d-(\d\d)"([^>]*?)\s*\/?>(?:<title>[^<]*<\/title><\/path>)?/g,
+  (_todo, codigo: string, resto: string) => {
+    const f = porCodigo.get(codigo);
+    if (!f) return _todo;
+    const clase = claseRelleno(modo, f.celda, f.comparada);
+    const texto = escapar(detalle(f));
+    const limpio = resto.replace(/\sdata-nombre="[^"]*"/, "");
+    return `<a href="#depto-${codigo}" data-depto="${codigo}" data-detalle="${texto}" aria-label="${texto}"><path id="mapa-d-${codigo}" class="${clase}"${limpio}><title>${texto}</title></path></a>`;
+  },
+);
+svg = svg.replace(
+  /(<svg[^>]*>)/,
+  `$1<defs><pattern id="mapa-datos-trama" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" class="dv-trama-fondo"/><line x1="0" y1="0" x2="0" y2="7" class="dv-trama-linea" stroke-width="2.2"/></pattern></defs>`,
+);
+
+const leyenda =
+  modo === "n"
+    ? CLASES.n.map((c, i) => ({ clase: `dv-n-${i + 1}`, texto: c.etiqueta }))
+    : modo === "comparar"
+      ? CLASES.diferencia.map((c, i) => ({ clase: `dv-dif-${i + 1}`, texto: c.etiqueta }))
+      : CLASES.pct.map((c, i) => ({ clase: `dv-pct-${i + 1}`, texto: c.etiqueta }));
+const tituloLeyenda =
+  modo === "n"
+    ? "Respuestas"
+    : modo === "comparar"
+      ? `Puntos porcentuales (${anio} − ${anioComparar})`
+      : "% con indicadores";
+---
+
+<figure class="mapa-datos" data-datos-mapa>
+  <figcaption id="mapa-datos-titulo" class="mapa-datos__titulo">{titulo}</figcaption>
+  <div class="mapa-datos__lienzo" set:html={svg} />
+  <div class="mapa-datos__leyenda">
+    <p class="mapa-datos__leyenda-titulo" id="mapa-datos-leyenda">{tituloLeyenda}</p>
+    <ul class="leyenda-datos" aria-labelledby="mapa-datos-leyenda">
+      {
+        leyenda.map((l) => (
+          <li>
+            <span class:list={["leyenda-datos__muestra", l.clase]} aria-hidden="true" />
+            {l.texto}
+          </li>
+        ))
+      }
+      <li>
+        <span class="leyenda-datos__muestra dv-suprimido" aria-hidden="true"></span>
+        {modo === "comparar" ? "Suprimido en algún año (menos de 5*)" : "Menos de 5 respuestas*"}
+      </li>
+      <li>
+        <span class="leyenda-datos__muestra dv-vacio" aria-hidden="true"></span>
+        {modo === "comparar" ? "Sin datos en algún año" : "Sin respuestas"}
+      </li>
+    </ul>
+    {
+      modo === "comparar" && (
+        <p class="mapa-datos__nota">
+          Azul: el porcentaje bajó. Ámbar: subió. Gris: cambio menor a 1 punto.
+        </p>
+      )
+    }
+    {
+      modo === "pct" && (
+        <p class="mapa-datos__nota">Cortes fijos, iguales todos los años, para poder comparar.</p>
+      )
+    }
+  </div>
+</figure>
+
+<style>
+  .mapa-datos {
+    margin: 0;
+    display: grid;
+    gap: var(--espacio-3);
+  }
+  .mapa-datos__titulo {
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .mapa-datos__lienzo :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    --c-mapa-borde: var(--color-fondo);
+  }
+  .mapa-datos__lienzo :global(g) {
+    stroke-width: 2;
+  }
+  .mapa-datos__lienzo :global(a) {
+    cursor: pointer;
+    outline: none;
+  }
+  .mapa-datos__lienzo :global(a:hover path),
+  .mapa-datos__lienzo :global(a.es-activo path) {
+    stroke: var(--color-texto);
+    stroke-width: 3;
+  }
+  .mapa-datos__lienzo :global(a:focus-visible path) {
+    stroke: var(--color-foco);
+    stroke-width: 5;
+  }
+  .mapa-datos__leyenda-titulo {
+    font-weight: 700;
+    margin: 0 0 var(--espacio-2);
+    font-size: 0.95rem;
+  }
+  .leyenda-datos {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: var(--espacio-2) var(--espacio-3);
+    font-size: 0.95rem;
+    max-width: none;
+  }
+  .leyenda-datos li {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+    margin: 0;
+    color: var(--color-texto);
+  }
+  .leyenda-datos__muestra {
+    flex: none;
+    width: 1.5rem;
+    height: 1rem;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-texto) 18%, transparent);
+  }
+  .mapa-datos__nota {
+    margin: var(--espacio-2) 0 0;
+    font-size: 0.9rem;
+    color: var(--color-texto-suave);
+  }
+</style>

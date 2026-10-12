@@ -4,9 +4,11 @@
  * Estrategia: se escriben las filas nuevas con `INSERT OR REPLACE` (mismo `calculado_en` para
  * toda la corrida) en lotes `batch` (cada lote es atómico) y al final se borran las filas cuyo
  * `calculado_en` sea distinto. Así los lectores siempre encuentran filas y no hace falta una
- * transacción gigante. Después se invalida la caché KV (`agregado:*`).
+ * transacción gigante. Luego se regeneran las publicaciones públicas seguras (`publicarAnios`,
+ * tabla `publicaciones`) y se invalida la caché KV (`agregado:*`, incluye `agregado:publico:*`).
  */
 import { invalidarCacheAgregados } from "../api/cache";
+import { publicarAnios, type ResultadoPublicar } from "../publico/publicar";
 import { agregar, type FilaRespuesta, VERSION_TODAS } from "./calcular";
 import {
   FILAS_POR_SENTENCIA,
@@ -27,6 +29,7 @@ export interface ResultadoRecalculo {
   filasLeidas: number;
   agregadosEscritos: number;
   calculadoEn: string;
+  publicaciones: ResultadoPublicar;
   ms: number;
 }
 
@@ -51,12 +54,14 @@ export async function recalcularAgregados(
     await env.DB.batch(lote);
   }
   await env.DB.prepare(SQL_BORRAR_OBSOLETOS).bind(calculadoEn).run();
+  const publicaciones = await publicarAnios(env, ahora);
   await invalidarCacheAgregados(env.CACHE);
 
   return {
     filasLeidas: results.length,
     agregadosEscritos: agregados.length,
     calculadoEn,
+    publicaciones,
     ms: Date.now() - inicio,
   };
 }
@@ -80,7 +85,11 @@ export async function crearSnapshotAnual(
   return true;
 }
 
-/** Tarea del cron diario: recalcular y, el 1 de enero, congelar el año anterior. */
+/**
+ * Tarea del cron diario: recalcular (lo que incluye `publicarAnios`: preliminar del año en curso
+ * y `v1` inmutable de los años cerrados) y, el 1 de enero, congelar el año anterior en
+ * `agregados_anuales`.
+ */
 export async function ejecutarCronDiario(env: EnvAgregados, ahora: Date = new Date()) {
   const resultado = await recalcularAgregados(env, ahora);
   let snapshot: number | null = null;

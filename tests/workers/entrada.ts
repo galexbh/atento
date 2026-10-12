@@ -1,6 +1,8 @@
 import { GET as getAgregado } from "@/pages/api/agregado";
 import { GET as getPeriodos } from "@/pages/api/agregado/periodos";
 import { GET as getGeo } from "@/pages/api/geo";
+import { GET as getPublicoAnios } from "@/pages/api/publico/anios";
+import { GET as getPublicoDatos } from "@/pages/api/publico/datos";
 import { POST as postRespuesta } from "@/pages/api/respuesta";
 import { GET as getSalud } from "@/pages/api/salud";
 
@@ -24,6 +26,10 @@ export default {
         return getAgregado(contexto);
       case "/api/agregado/periodos":
         return getPeriodos(contexto);
+      case "/api/publico/datos":
+        return getPublicoDatos(contexto);
+      case "/api/publico/anios":
+        return getPublicoAnios(contexto);
       case "/api/geo":
         return getGeo(contexto);
       default:

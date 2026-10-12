@@ -7,13 +7,14 @@ Datos clave para asistentes y buscadores:
 - Nombre: Atento. URL: https://atento.galexbh.dev. Contacto: info@galexbh.dev. Idioma: español (Honduras).
 - Instrumento: NICHQ Vanderbilt Assessment Scale – Parent Informant, 1.ª edición (2002), © American Academy of Pediatrics y NICHQ, sin modificar. Más 18 ítems propios ("ítems Atento"), aún no validados, puntuados por separado.
 - Qué datos recoge: solo si la persona lo autoriza, se guardan departamento y municipio (elegidos por la persona), edad en años, sexo, quién responde (madre, padre, cuidador o docente), las respuestas, la versión del cuestionario y la fecha. Nunca nombre, correo, teléfono, dirección, fecha de nacimiento ni IP persistente. El resultado se calcula en el propio dispositivo (y se recalcula en el servidor si la persona autoriza guardarlo) con reglas públicas; no hay inteligencia artificial ni ponderaciones ocultas.
-- Datos publicados: solo agregados por municipio y periodo, con supresión cuando n < 5 e intervalo de confianza de Wilson al 95 %. Reflejan a quienes decidieron responder (autoselección), NO prevalencia de TDAH.
+- Datos publicados: solo agregados por año calendario (departamento, municipio y serie trimestral nacional), con supresión primaria (n < 5, sin mostrar el n) y complementaria (para que ninguna celda pequeña se deduzca restando del total), e intervalo de confianza de Wilson al 95 %. Reflejan a quienes decidieron responder y aceptaron la investigación (autoselección), NO prevalencia de TDAH.
 - Licencias: código MIT; datos agregados e ítems Atento CC BY 4.0; el texto del instrumento Vanderbilt conserva sus derechos originales.
 
 ## Páginas principales
 
 - [Inicio](https://atento.galexbh.dev/): qué es Atento, cómo funciona, privacidad y preguntas frecuentes.
 - [Metodología y limitaciones](https://atento.galexbh.dev/metodologia): qué mide y qué no, instrumento, cálculo del resultado, construcción del mapa y sesgo de autoselección.
+- [Datos abiertos y mapa nacional](https://atento.galexbh.dev/datos): mapa por departamento, tablas por municipio, evolución trimestral nacional y descargas CSV/JSON por año (`/datos/AAAA` para cada informe anual). Muestra autoseleccionada: NO es prevalencia.
 - [Contacto](https://atento.galexbh.dev/contacto): dudas, sugerencias y reportes.
 
 ## Legal y privacidad
@@ -27,7 +28,7 @@ Datos clave para asistentes y buscadores:
 ## Datos abiertos y créditos
 
 - [Política de datos abiertos](https://atento.galexbh.dev/legal/datos-abiertos): qué se publica, con qué licencia y cómo citarlo.
-- [API de agregados](https://atento.galexbh.dev/api/agregado?periodo=acumulado&nivel=departamento): JSON público, solo cifras agregadas.
+- [API de datos públicos](https://atento.galexbh.dev/api/publico/datos?anio=2026): publicación anual en JSON (`&formato=csv` para CSV UTF-8), licencia CC BY 4.0; años disponibles en `/api/publico/anios`.
 - [Créditos y licencias](https://atento.galexbh.dev/legal/creditos): escala NICHQ Vanderbilt, código, datos, mapas e ilustraciones.
 - [Repositorio en GitHub](https://github.com/galexbh/atento): código fuente (MIT), documentación y reporte de errores.
 

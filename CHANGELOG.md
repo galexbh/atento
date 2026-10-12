@@ -7,6 +7,29 @@ se anotan además en la política de datos abiertos.
 
 ## [Unreleased]
 
+### Mapa público /datos (2026-10-12)
+- Página `/datos` y `/datos/<año>` con mapa por departamento (% con indicadores, n de respuestas y comparación entre años), tablas, serie trimestral nacional y descargas CSV/JSON (CC BY 4.0).
+- Publicación segura: solo años completos, supresión primaria n<5 y complementaria en tres niveles; versión v1 inmutable al cerrar el año.
+- La preliminar del año en curso solo incluye trimestres cerrados y solo departamentos, para impedir ataques por diferencia entre versiones sucesivas.
+- `/api/agregado` endurecido: ya no publica meses, trimestres, acumulado ni municipios sin supresión complementaria.
+
+### Datos abiertos: mapa nacional (2026-10-11)
+- Página pública `/datos` (año más reciente) y `/datos/AAAA` (informe anual): mapa por departamento
+  con modos % con indicadores, número de respuestas y cambio frente a otro año; tabla por
+  departamento, municipios plegables, serie trimestral nacional, tabla departamento × año y
+  descargas CSV/JSON con licencia CC BY 4.0. Funciona sin JavaScript; paletas nuevas `--dv-*`.
+- API `GET /api/publico/datos?anio=` (JSON/CSV con BOM, ETag/304) y `GET /api/publico/anios`.
+- Nueva regla de publicación: solo año calendario, supresión primaria (n < 5 sin mostrar n) y
+  complementaria (municipios, departamentos y trimestres), serie solo nacional, 1 decimal, solo
+  respuestas con consentimiento de investigación.
+- Migración `0004_publicaciones.sql`: publicaciones versionadas (`preliminar` del año en curso,
+  `v1` inmutable al cerrar el año), regeneradas por `recalcularAgregados`/cron.
+- **Cambio incompatible:** `/api/agregado` solo acepta `periodo` = año y `version=todas`, delega en
+  la publicación segura (`n: null` en celdas suprimidas, `pctAmbas: null`); `/api/agregado/periodos`
+  solo lista años. Ya no se publican meses, trimestres, acumulado ni municipios sin supresión
+  complementaria.
+- Enlaces "Datos" en cabecera y pie; la portada enlaza al mapa; `/datos` en el sitemap y `llms.txt`.
+
 ### Turnstile (2026-10-12)
 - Widget real integrado en preview y producción; secreto validado y guardado sin exponerlo.
 - El servidor exige `action` y `hostname` además de `success`; tokens de hasta 2048 caracteres.

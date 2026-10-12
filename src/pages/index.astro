@@ -213,7 +213,7 @@ const faq = [
           departamento y municipio con datos abiertos. Nunca se publica una respuesta
           individual: solo cifras de municipios con al menos 5 respuestas.
         </p>
-        <p class="investigacion__pronto">Próximamente: el mapa nacional.</p>
+        <p><a class="investigacion__pronto" href="/datos">Ver el mapa nacional</a></p>
       </div>
       <div class="mapa" set:html={ilustracion("honduras", { clase: "ilustracion" })} />
     </div>
@@ -440,6 +440,7 @@ const faq = [
   }
   .investigacion__pronto {
     display: inline-block;
+    text-decoration: none;
     font-weight: 700;
     padding: 0.4rem 0.9rem;
     border-radius: 999px;

@@ -1,0 +1,62 @@
+---
+import { ilustracion } from "@/components/svg";
+
+interface Props {
+  tipo: "vacio" | "error";
+}
+const { tipo } = Astro.props;
+---
+
+<section class="contenedor estado-datos" aria-labelledby="estado-datos-titulo">
+  <div
+    class="estado-datos__ilus"
+    set:html={ilustracion(tipo === "vacio" ? "vacio" : "error", { decorativo: true, clase: "ilustracion" })}
+  />
+  {
+    tipo === "vacio" ? (
+      <>
+        <h1 id="estado-datos-titulo">El mapa nacional todavía no tiene datos</h1>
+        <p class="grande">
+          Publicamos cifras cuando hay al menos 5 cuestionarios con permiso de investigación en el
+          año. Con tu respuesta anónima, el mapa empieza a llenarse.
+        </p>
+        <p class="estado-datos__acciones">
+          <a href="/cribado/consentimiento" class="boton boton--primario">Hacer el cribado</a>
+          <a href="/metodologia" class="boton boton--secundario">Cómo se construye el mapa</a>
+        </p>
+      </>
+    ) : (
+      <>
+        <h1 id="estado-datos-titulo">No pudimos cargar los datos</h1>
+        <p class="grande">
+          Algo falló de nuestro lado. Prueba de nuevo en unos minutos; si sigue pasando, escríbenos a
+          <a href="mailto:info@galexbh.dev">info@galexbh.dev</a>.
+        </p>
+        <p class="estado-datos__acciones">
+          <a href="/datos" class="boton boton--primario">Reintentar</a>
+          <a href="/" class="boton boton--secundario">Ir al inicio</a>
+        </p>
+      </>
+    )
+  }
+</section>
+
+<style>
+  .estado-datos {
+    text-align: center;
+    padding-block: var(--espacio-5);
+  }
+  .estado-datos__ilus {
+    max-width: 18rem;
+    margin: 0 auto var(--espacio-4);
+  }
+  .estado-datos p {
+    margin-inline: auto;
+  }
+  .estado-datos__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--espacio-3);
+  }
+</style>

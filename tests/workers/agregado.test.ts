@@ -50,7 +50,7 @@ async function insertar(filas: FilaRespuestaNueva[]) {
 interface Dato {
   codigo: string;
   nombre: string;
-  n: number;
+  n: number | null;
   pct: number | null;
   ic95: [number, number] | null;
   suprimido: boolean;
@@ -69,12 +69,13 @@ async function limpiar() {
     env.DB.prepare("DELETE FROM respuestas"),
     env.DB.prepare("DELETE FROM agregados_municipio"),
     env.DB.prepare("DELETE FROM agregados_anuales"),
+    env.DB.prepare("DELETE FROM publicaciones"),
   ]);
   const claves = await env.CACHE.list({ prefix: "agregado:" });
   await Promise.all(claves.keys.map((k) => env.CACHE.delete(k.name)));
 }
 
-/** Semilla: Tegucigalpa (0801) 10 filas con 3 positivas; Valle de Ángeles (0809) 3 filas. */
+/** Semilla: Distrito Central (0801) 10 filas con 3 positivas; Lepaterique (0809) 3 filas. */
 async function sembrar() {
   const filas: FilaRespuestaNueva[] = [];
   for (let i = 0; i < 10; i++) {
@@ -151,9 +152,11 @@ describe("agregados", () => {
     expect(viejas?.n).toBe(0);
   });
 
-  it("GET /api/agregado: supresión, nombres de catálogo, caché KV y ETag", async () => {
-    await recalcularAgregados(env);
-    const url = `${ORIGEN}/api/agregado?periodo=acumulado&nivel=municipio&version=todas`;
+  it("GET /api/agregado (endurecido): año, supresión complementaria, caché KV y ETag", async () => {
+    // 2026 cerrado (v1 con municipios). 0802 con 6 respuestas: 0809 (3) queda suprimido por primaria y 0802 por complementaria.
+    await insertar(Array.from({ length: 6 }, () => fila({ municipio: "0802" })));
+    await recalcularAgregados(env, new Date("2027-01-02T03:00:00Z"));
+    const url = `${ORIGEN}/api/agregado?periodo=2026&nivel=municipio&version=todas`;
 
     const r1 = await exports.default.fetch(url);
     expect(r1.status).toBe(200);
@@ -161,25 +164,35 @@ describe("agregados", () => {
     expect(r1.headers.get("Cache-Control")).toBe("public, max-age=300, s-maxage=3600");
     const etag = r1.headers.get("ETag");
     expect(etag).toMatch(/^"[0-9a-f]{32}"$/);
-    const cuerpo = await r1.json<Agregado>();
-    expect(cuerpo.periodo).toBe("acumulado");
+    const cuerpo = await r1.json<Agregado & { versionDataset: string; preliminar: boolean }>();
+    expect(cuerpo.periodo).toBe("2026");
     expect(cuerpo.nivel).toBe("municipio");
-    expect(cuerpo.calculadoEn).not.toBeNull();
+    expect(cuerpo.versionDataset).toBe("v1");
+    expect(cuerpo.preliminar).toBe(false);
+    expect(cuerpo.calculadoEn).toBe("2027-01-02T03:00:00.000Z");
     const tegus = cuerpo.datos.find((d) => d.codigo === "0801");
     expect(tegus).toMatchObject({ nombre: "Distrito Central", n: 10, pct: 30, suprimido: false });
     expect(tegus?.ic95?.[0]).toBeLessThan(30);
     expect(tegus?.ic95?.[1]).toBeGreaterThan(30);
-    const valle = cuerpo.datos.find((d) => d.codigo === "0809");
-    expect(valle).toMatchObject({ n: 3, pct: null, ic95: null, suprimido: true });
-    // Las filas de departamento ("xx00") no aparecen en nivel municipio.
-    expect(cuerpo.datos.some((d) => d.codigo.endsWith("00"))).toBe(false);
+    // Primaria: n no se publica (ni siquiera el exacto).
+    expect(cuerpo.datos.find((d) => d.codigo === "0809")).toMatchObject({
+      n: null,
+      pct: null,
+      ic95: null,
+      suprimido: true,
+    });
+    // Complementaria: 13 + 6 - 10 = 9 no permite deducir los 3 de 0809.
+    expect(cuerpo.datos.find((d) => d.codigo === "0802")).toMatchObject({
+      n: null,
+      suprimido: true,
+    });
+    expect(cuerpo.datos.every((d) => d.suprimido || (d.n as number) >= 5)).toBe(true);
 
-    // Segunda lectura: desde KV.
+    // Segunda lectura: desde KV (clave bajo el prefijo que invalida el cron).
     const r2 = await exports.default.fetch(url);
     expect(r2.headers.get("X-Cache")).toBe("HIT");
     expect(r2.headers.get("ETag")).toBe(etag);
-    const enKv = await env.CACHE.get("agregado:acumulado:municipio:todas");
-    expect(enKv).not.toBeNull();
+    expect(await env.CACHE.get("agregado:publico:2026")).not.toBeNull();
 
     // ETag: 304.
     const r3 = await exports.default.fetch(url, { headers: { "If-None-Match": etag as string } });
@@ -187,22 +200,32 @@ describe("agregados", () => {
 
     // Nivel departamento con nombre del catálogo.
     const r4 = await exports.default.fetch(
-      `${ORIGEN}/api/agregado?periodo=2026-Q4&nivel=departamento`,
+      `${ORIGEN}/api/agregado?periodo=2026&nivel=departamento`,
     );
     const deptos = await r4.json<Agregado>();
     expect(deptos.version).toBe("todas");
-    expect(deptos.datos).toHaveLength(1);
-    expect(deptos.datos[0]).toMatchObject({ codigo: "08", nombre: "Francisco Morazán", n: 10 });
+    expect(deptos.datos).toEqual([
+      expect.objectContaining({
+        codigo: "08",
+        nombre: "Francisco Morazán",
+        n: 19,
+        suprimido: false,
+      }),
+    ]);
 
     // Recalcular invalida la caché.
     await recalcularAgregados(env);
-    expect(await env.CACHE.get("agregado:acumulado:municipio:todas")).toBeNull();
+    expect(await env.CACHE.get("agregado:publico:2026")).toBeNull();
   });
 
-  it("GET /api/agregado valida parámetros", async () => {
+  it("GET /api/agregado rechaza meses, trimestres, acumulado y versiones de instrumento", async () => {
     for (const q of [
+      "periodo=acumulado",
+      "periodo=2026-Q4",
+      "periodo=2026-10",
       "periodo=2026-13",
-      "periodo=acumulado&nivel=pais",
+      "periodo=2026&version=vanderbilt-padres-es-1.0",
+      "periodo=2026&nivel=pais",
       "periodo=x",
       "periodo=2026&otro=1",
       "",
@@ -211,21 +234,20 @@ describe("agregados", () => {
       expect(r.status, q).toBe(400);
       expect((await r.json<{ ok: boolean }>()).ok).toBe(false);
     }
-    // Un periodo válido sin datos responde 200 con lista vacía.
+    // Un año válido sin datos responde 200 con lista vacía.
     const r = await exports.default.fetch(`${ORIGEN}/api/agregado?periodo=2019`);
     expect(r.status).toBe(200);
     expect((await r.json<Agregado>()).datos).toEqual([]);
   });
 
-  it("GET /api/agregado/periodos lista periodos y versiones", async () => {
-    await recalcularAgregados(env);
+  it("GET /api/agregado/periodos lista solo años publicados", async () => {
+    await recalcularAgregados(env, new Date("2027-01-02T03:00:00Z"));
     const r = await exports.default.fetch(`${ORIGEN}/api/agregado/periodos`);
     expect(r.status).toBe(200);
     const cuerpo = await r.json<{ periodos: string[]; versiones: string[]; calculadoEn: string }>();
-    expect(cuerpo.periodos).toContain("acumulado");
-    expect(cuerpo.periodos).toContain("2026-Q4");
-    expect(cuerpo.versiones).toEqual(["todas", "vanderbilt-padres-es-1.0"]);
-    expect(cuerpo.calculadoEn).toBeTruthy();
+    expect(cuerpo.periodos).toEqual(["2026"]);
+    expect(cuerpo.versiones).toEqual(["todas"]);
+    expect(cuerpo.calculadoEn).toBe("2027-01-02T03:00:00.000Z");
   });
 
   it("cron del 1 de enero crea el snapshot anual una sola vez", async () => {

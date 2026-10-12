@@ -1,0 +1,55 @@
+---
+/**
+ * Tablas de municipios por departamento (con supresión) dentro de <details>. Sin <style> propio
+ * para no añadir atributos de ámbito a cada celda: usa clases globales (global.css e Informe).
+ */
+import type { CeldaMuni } from "@/lib/publico/datos";
+import { fmtIc, fmtPct, textoN } from "@/lib/publico/vista";
+
+interface Props {
+  anio: number;
+  grupos: { nombre: string; municipios: CeldaMuni[] }[];
+}
+const { anio, grupos } = Astro.props;
+---
+
+<div class="municipios">
+  {
+    grupos.map((g) => (
+      <details class="plegable">
+        <summary>
+          <span>
+            {g.nombre} <span class="suave">· {g.municipios.length} {g.municipios.length === 1 ? "municipio" : "municipios"}</span>
+          </span>
+        </summary>
+        <div class="tabla-envoltura" role="region" aria-label={`Municipios de ${g.nombre}`} tabindex="0">
+          <table class="tabla-datos">
+            <caption class="visualmente-oculto">
+              Municipios de {g.nombre}, {anio}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Municipio</th>
+                <th scope="col" class="num">Respuestas</th>
+                <th scope="col" class="num">% con indicadores</th>
+                <th scope="col" class="num">IC95</th>
+              </tr>
+            </thead>
+            <tbody>
+              {g.municipios.map((m) => (
+                <tr>
+                  <th scope="row">
+                    <span class="tabla-datos__codigo">{m.codigo}</span> {m.nombre}
+                  </th>
+                  <td class="num">{textoN(m)}</td>
+                  <td class="num">{m.suprimido ? "—" : fmtPct(m.pctIndicadores)}</td>
+                  <td class="num">{m.suprimido ? "—" : fmtIc(m.ic95)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    ))
+  }
+</div>

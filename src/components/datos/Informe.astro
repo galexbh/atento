@@ -1,0 +1,590 @@
+---
+import MapaDatos from "@/components/datos/MapaDatos.astro";
+import Municipios from "@/components/datos/Municipios.astro";
+import Serie from "@/components/datos/Serie.astro";
+/**
+ * Informe anual público (/datos y /datos/[anio]). Todo se renderiza en servidor y funciona sin
+ * JavaScript: los controles son formularios GET y el mapa enlaza a la tabla. Un único script
+ * inline (con nonce) añade la tarjeta de detalle y el resaltado de la fila.
+ */
+import { icono } from "@/components/svg";
+import { LICENCIA_URL, nombreArchivo, type Publicacion } from "@/lib/publico/datos";
+import type { AnioPublicado } from "@/lib/publico/publicar";
+import {
+  filasDepartamentos,
+  fmtFecha,
+  fmtIc,
+  fmtPct,
+  fmtPp,
+  type Modo,
+  NOTA_SUPRIMIDO,
+  textoN,
+} from "@/lib/publico/vista";
+
+interface Props {
+  p: Publicacion;
+  anios: AnioPublicado[];
+  modo: Modo;
+  comparar: Publicacion | null;
+  anioComparar: number | null;
+  historico: Publicacion[];
+  ruta: string;
+}
+
+const { p, anios, modo, comparar, anioComparar, historico, ruta } = Astro.props;
+const nonce = Astro.locals.nonce;
+const filas = filasDepartamentos(p, modo === "comparar" ? comparar : null);
+const otrosAnios = anios.filter((a) => a.anio !== p.anio);
+const FIN_TRIMESTRE = ["31 de marzo", "30 de junio", "30 de septiembre", "31 de diciembre"];
+function fmtCorte(corte: string | null | undefined): string {
+  const m = /^(\d{4})-Q([1-4])$/.exec(corte ?? "");
+  return m ? `${FIN_TRIMESTRE[Number(m[2]) - 1]} de ${m[1]}` : fmtFecha(p.generadoEn);
+}
+const municipiosPorDepto = new Map<string, Publicacion["municipios"]>();
+for (const m of p.municipios) {
+  const lista = municipiosPorDepto.get(m.departamento) ?? [];
+  lista.push(m);
+  municipiosPorDepto.set(m.departamento, lista);
+}
+const urlDatos = (formato: "csv" | "json") =>
+  `/api/publico/datos?anio=${p.anio}&formato=${formato}`;
+const versionTexto = `${p.anio}-${p.versionDataset}`;
+const cita = `Atento (${p.anio}). Datos agregados de cribado comunitario de TDAH en Honduras, versión ${versionTexto}. https://atento.galexbh.dev/datos/${p.anio}. Licencia CC BY 4.0.`;
+const historicoAsc = [...historico].sort((a, b) => a.anio - b.anio);
+const porAnio = historicoAsc.map((h) => ({
+  anio: h.anio,
+  deptos: new Map(h.departamentos.map((d) => [d.codigo, d])),
+}));
+const hayMunicipiosSuprimidos = p.municipios.some((m) => m.suprimido);
+---
+
+<section class="datos-cabecera banda--suave" aria-labelledby="datos-titulo">
+  <div class="contenedor contenedor--ancho datos-cabecera__rejilla">
+    <div>
+      <p class="datos-cabecera__antetitulo">Datos abiertos · Honduras</p>
+      <h1 id="datos-titulo">Mapa nacional de cribados {p.anio}</h1>
+      <p class="datos-cabecera__estado">
+        {
+          p.preliminar ? (
+            <span class="sello sello--preliminar">
+              Preliminar · datos hasta el {fmtCorte(p.corte)}
+            </span>
+          ) : (
+            <span class="sello sello--cerrado">Cerrado · versión {p.versionDataset}</span>
+          )
+        }
+      </p>
+      <p class="datos-cabecera__texto">
+        Cuestionarios completos de familias y docentes que aceptaron sumar sus respuestas a la
+        investigación. <a href="/metodologia">Cómo se calcula y sus límites</a>.
+      </p>
+    </div>
+    <dl class="cifras">
+      <div class="cifra">
+        <dt>Con indicadores</dt>
+        <dd>
+          <span class="cifra__valor tabular">{fmtPct(p.nacional.pctIndicadores)}</span>
+          <span class="cifra__detalle tabular">IC95 {fmtIc(p.nacional.ic95)}</span>
+        </dd>
+      </div>
+      <div class="cifra">
+        <dt>Respuestas</dt>
+        <dd>
+          <span class="cifra__valor tabular">{textoN(p.nacional)}</span>
+          <span class="cifra__detalle">en todo el país</span>
+        </dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<div class="contenedor contenedor--ancho datos-cuerpo">
+  <aside class="aviso aviso--importante aviso-prevalencia" aria-labelledby="aviso-prevalencia">
+    <p class="aviso__titulo" id="aviso-prevalencia">Esto no es la prevalencia de TDAH</p>
+    <p>
+      Responde quien llega al sitio, casi siempre porque algo le preocupa: es una muestra
+      autoseleccionada. Las cifras solo describen a quienes participaron y aceptaron la
+      investigación, y "con indicadores" es un resultado de cribado, no un diagnóstico. No sirven
+      para saber cuántos niños o niñas tienen TDAH en Honduras ni en ningún departamento.
+    </p>
+  </aside>
+
+  <section class="datos-mapa" aria-labelledby="mapa-titulo">
+    <h2 id="mapa-titulo" class="visualmente-oculto">Mapa por departamento</h2>
+    <div class="datos-mapa__lienzo">
+      <MapaDatos filas={filas} modo={modo} anio={p.anio} anioComparar={anioComparar} />
+      <p class="detalle" id="mapa-detalle" aria-live="polite" data-detalle-tarjeta>
+        Elige un departamento en el mapa para ir a su fila en la tabla.
+      </p>
+    </div>
+    <div class="datos-mapa__controles">
+      <form class="control-anio" method="get" action="/datos">
+        <label for="selector-anio">Año</label>
+        <div class="control-anio__fila">
+          <select id="selector-anio" name="anio" class="selector">
+            {anios.map((a) => (
+              <option value={a.anio} selected={a.anio === p.anio}>
+                {a.anio}
+              </option>
+            ))}
+          </select>
+          <button type="submit" class="boton boton--secundario">Ver año</button>
+        </div>
+      </form>
+
+      <form class="control-modo" method="get" action={ruta}>
+        <fieldset>
+          <legend>Mostrar en el mapa</legend>
+          <div class="opciones">
+            <label class="opcion">
+              <input type="radio" name="modo" value="pct" checked={modo === "pct"} />
+              <span class="opcion__marca" aria-hidden="true"></span>
+              % con indicadores
+            </label>
+            <label class="opcion">
+              <input type="radio" name="modo" value="n" checked={modo === "n"} />
+              <span class="opcion__marca" aria-hidden="true"></span>
+              Número de respuestas
+            </label>
+            {
+              otrosAnios.length > 0 && (
+                <label class="opcion">
+                  <input type="radio" name="modo" value="comparar" checked={modo === "comparar"} />
+                  <span class="opcion__marca" aria-hidden="true" />
+                  Cambio frente a otro año
+                </label>
+              )
+            }
+          </div>
+        </fieldset>
+        {
+          otrosAnios.length > 0 && (
+            <div class="campo control-modo__comparar">
+              <label for="selector-comparar">Año para comparar</label>
+              <select id="selector-comparar" name="comparar" class="selector">
+                {otrosAnios.map((a) => (
+                  <option value={a.anio} selected={a.anio === anioComparar}>
+                    {a.anio}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        }
+        <button type="submit" class="boton boton--azul">Actualizar mapa</button>
+      </form>
+    </div>
+
+  </section>
+
+  <section class="datos-seccion" aria-labelledby="tabla-titulo">
+    <h2 id="tabla-titulo">Por departamento</h2>
+    <p class="suave">Equivalente accesible del mapa. Orden por código INE.</p>
+    <div class="tabla-envoltura" role="region" aria-labelledby="tabla-titulo" tabindex="0">
+      <table class="tabla-datos">
+        <caption class="visualmente-oculto">Respuestas y porcentajes por departamento, {p.anio}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Departamento</th>
+            <th scope="col" class="num">Respuestas</th>
+            <th scope="col" class="num">% con indicadores</th>
+            <th scope="col" class="num">IC95</th>
+            <th scope="col" class="num">% inatención</th>
+            <th scope="col" class="num">% hiperactividad</th>
+            {modo === "comparar" && <th scope="col" class="num">Cambio vs {anioComparar}</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {
+            filas.map((f) => {
+              const c = f.celda;
+              const visible = c && !c.suprimido;
+              return (
+                <tr id={`depto-${f.codigo}`} data-fila-depto={f.codigo}>
+                  <th scope="row">
+                    <span class="tabla-datos__codigo">{f.codigo}</span> {f.nombre}
+                  </th>
+                  <td class="num">{textoN(c)}</td>
+                  <td class="num">{visible ? fmtPct(c.pctIndicadores) : "—"}</td>
+                  <td class="num">{visible ? fmtIc(c.ic95) : "—"}</td>
+                  <td class="num">{visible ? fmtPct(c.pctInatencion) : "—"}</td>
+                  <td class="num">{visible ? fmtPct(c.pctHiperactividad) : "—"}</td>
+                  {modo === "comparar" && (
+                    <td class="num">{f.diferencia === null ? "—" : fmtPp(f.diferencia)}</td>
+                  )}
+                </tr>
+              );
+            })
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="nota-tabla">{NOTA_SUPRIMIDO}</p>
+
+    <h3 class="datos-subtitulo">Municipios</h3>
+    {
+      p.preliminar ? (
+        <p class="suave">
+          El detalle por municipio se publica cuando cierra el año. Mientras tanto solo mostramos
+          departamentos y actualizamos al terminar cada trimestre: así nadie puede comparar dos
+          versiones seguidas para deducir respuestas recientes en lugares pequeños.
+        </p>
+      ) : (
+        <>
+          <p class="suave">
+            Solo aparecen municipios con al menos una respuesta.
+            {hayMunicipiosSuprimidos && " Si un departamento tiene un solo municipio pequeño, se oculta también otro para que no se deduzca restando del total del departamento."}
+          </p>
+          <Municipios
+            anio={p.anio}
+            grupos={filas
+              .filter((f) => municipiosPorDepto.has(f.codigo))
+              .map((f) => ({ nombre: f.nombre, municipios: municipiosPorDepto.get(f.codigo) ?? [] }))}
+          />
+        </>
+      )
+    }
+  </section>
+
+  <section class="datos-seccion" aria-labelledby="evolucion-titulo">
+    <h2 id="evolucion-titulo">Evolución en {p.anio}</h2>
+    <p class="suave">Total nacional por trimestre. No hay series por departamento ni por mes para proteger la privacidad.</p>
+    <Serie serie={p.serieTrimestral} anio={p.anio} />
+
+    {
+      porAnio.length > 1 && (
+        <>
+          <h3 class="datos-subtitulo">Departamentos por año</h3>
+          <p class="suave">% con indicadores (respuestas). Cada año es una publicación independiente.</p>
+          <div class="tabla-envoltura" role="region" aria-label="Departamentos por año" tabindex="0">
+            <table class="tabla-datos">
+              <caption class="visualmente-oculto">% con indicadores por departamento y año</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Departamento</th>
+                  {porAnio.map((a) => (
+                    <th scope="col" class="num">{a.anio}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr>
+                    <th scope="row">{f.nombre}</th>
+                    {porAnio.map((a) => {
+                      const c = a.deptos.get(f.codigo);
+                      return (
+                        <td class="num">
+                          {c && !c.suprimido ? `${fmtPct(c.pctIndicadores)} (${textoN(c)})` : textoN(c)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )
+    }
+  </section>
+
+  <section class="datos-seccion descargas" aria-labelledby="descargas-titulo">
+    <h2 id="descargas-titulo">Descargar los datos</h2>
+    <div class="descargas__rejilla">
+      <div class="panel">
+        <p class="descargas__version">
+          Versión del dataset: <strong>{versionTexto}</strong>
+          {p.preliminar ? " (preliminar: se actualiza al cerrar cada trimestre, sin municipios)" : " (cerrada: no cambia)"}
+        </p>
+        <p class="descargas__botones">
+          <a class="boton boton--azul" href={urlDatos("csv")} download={nombreArchivo(p, "csv")}>
+            <Fragment set:html={icono("descargar")} />
+            CSV
+          </a>
+          <a class="boton boton--secundario" href={urlDatos("json")}>
+            <Fragment set:html={icono("descargar")} />
+            JSON
+          </a>
+        </p>
+        <p class="suave">
+          Una fila por celda (nacional, departamentos, municipios y trimestres) con las mismas
+          supresiones que esta página. API: <code>/api/publico/datos?anio={p.anio}</code>.
+        </p>
+      </div>
+      <div class="panel">
+        <p>
+          Licencia <a href={LICENCIA_URL} rel="license">Creative Commons Atribución 4.0 (CC BY 4.0)</a>:
+          puedes copiar, transformar y redistribuir citando la fuente. Más detalles en la
+          <a href="/legal/datos-abiertos">política de datos abiertos</a>.
+        </p>
+        <p class="descargas__cita-titulo">Cómo citar</p>
+        <blockquote class="descargas__cita">{cita}</blockquote>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script is:inline nonce={nonce}>
+  (function () {
+    var mapa = document.querySelector("[data-datos-mapa]");
+    var tarjeta = document.querySelector("[data-detalle-tarjeta]");
+    if (!mapa || !tarjeta) return;
+    tarjeta.textContent = "Toca o elige con el teclado un departamento para ver su detalle.";
+    mapa.addEventListener("click", function (e) {
+      var a = e.target instanceof Element ? e.target.closest("a[data-depto]") : null;
+      if (!a) return;
+      e.preventDefault();
+      var codigo = a.getAttribute("data-depto");
+      tarjeta.textContent = a.getAttribute("data-detalle") || "";
+      mapa.querySelectorAll("a[data-depto]").forEach(function (x) {
+        x.classList.toggle("es-activo", x === a);
+      });
+      document.querySelectorAll("tr[data-fila-depto]").forEach(function (tr) {
+        tr.classList.toggle("es-activa", tr.getAttribute("data-fila-depto") === codigo);
+      });
+    });
+  })();
+</script>
+
+<style>
+  .datos-cabecera {
+    padding-block: var(--espacio-5) var(--espacio-4);
+    border-bottom: var(--borde-ancho) solid var(--color-borde);
+  }
+  .datos-cabecera__rejilla {
+    display: grid;
+    gap: var(--espacio-4);
+    align-items: end;
+  }
+  .datos-cabecera h1 {
+    margin-bottom: var(--espacio-2);
+  }
+  .datos-cabecera__antetitulo {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.85rem;
+    color: var(--color-primario-fuerte);
+    margin-bottom: var(--espacio-2);
+  }
+  .datos-cabecera__estado {
+    margin-bottom: var(--espacio-3);
+  }
+  .datos-cabecera__texto {
+    margin: 0;
+  }
+  .sello {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    border: var(--borde-ancho) solid currentColor;
+  }
+  .sello--preliminar {
+    background: var(--color-acento);
+    border-color: var(--color-acento);
+    color: var(--color-acento-contraste);
+  }
+  .sello--cerrado {
+    color: var(--color-verde-texto);
+    background: var(--color-superficie);
+  }
+  .cifras {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--espacio-3);
+    margin: 0;
+  }
+  .cifra {
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio-grande);
+    padding: var(--espacio-3);
+  }
+  .cifra dt {
+    font-weight: 700;
+    color: var(--color-texto-suave);
+    font-size: 0.95rem;
+  }
+  .cifra dd {
+    margin: 0;
+    display: grid;
+  }
+  .cifra__valor {
+    font-size: clamp(1.9rem, 1.5rem + 1.6vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .cifra__detalle {
+    color: var(--color-texto-suave);
+    font-size: 0.9rem;
+  }
+  .datos-cuerpo {
+    padding-block: var(--espacio-4);
+  }
+  .aviso-prevalencia {
+    border-width: 3px;
+    margin-bottom: var(--espacio-5);
+  }
+  .aviso-prevalencia p {
+    max-width: 75ch;
+  }
+  .datos-mapa {
+    display: grid;
+    gap: var(--espacio-4);
+  }
+  .datos-mapa__controles {
+    display: grid;
+    gap: var(--espacio-4);
+    align-content: start;
+  }
+  .control-anio label {
+    display: block;
+    font-size: 1.05rem;
+    margin-bottom: var(--espacio-2);
+  }
+  .control-anio__fila {
+    display: flex;
+    gap: var(--espacio-2);
+  }
+  .control-anio__fila .selector {
+    flex: 1;
+  }
+  .control-anio__fila .boton {
+    padding-inline: 1rem;
+    font-size: 1rem;
+  }
+  .control-modo fieldset {
+    margin-bottom: var(--espacio-3);
+  }
+  .control-modo legend {
+    font-size: 1.05rem;
+    margin-bottom: var(--espacio-2);
+  }
+  .control-modo__comparar {
+    margin-bottom: var(--espacio-3);
+  }
+  .control-modo .boton {
+    width: 100%;
+  }
+  .datos-mapa__lienzo {
+    display: grid;
+    gap: var(--espacio-3);
+    align-content: start;
+  }
+  .detalle {
+    margin: 0;
+    padding: var(--espacio-3);
+    border-radius: var(--radio);
+    background: var(--color-superficie);
+    border: var(--borde-ancho) solid var(--color-borde);
+    font-weight: 600;
+    min-height: 3.5rem;
+    max-width: none;
+  }
+  .datos-seccion {
+    margin-top: var(--espacio-5);
+  }
+  .datos-subtitulo {
+    margin-top: var(--espacio-5);
+  }
+  :global(.tabla-envoltura) {
+    overflow-x: auto;
+    border: var(--borde-ancho) solid var(--color-borde);
+    border-radius: var(--radio);
+    background: var(--color-superficie);
+  }
+  :global(.tabla-datos) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    min-width: 34rem;
+  }
+  :global(.tabla-datos th),
+  :global(.tabla-datos td) {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--color-borde);
+    text-align: left;
+    vertical-align: top;
+  }
+  :global(.tabla-datos thead th) {
+    background: var(--color-superficie-2);
+    font-size: 0.9rem;
+  }
+  :global(.tabla-datos tbody th) {
+    font-weight: 600;
+  }
+  :global(.tabla-datos tr:last-child > *) {
+    border-bottom: 0;
+  }
+  :global(.tabla-datos .num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  :global(.tabla-datos__codigo) {
+    color: var(--color-texto-suave);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    margin-right: 0.25rem;
+  }
+  .tabla-datos tr:target > *,
+  .tabla-datos tr.es-activa > * {
+    background: var(--color-primario-suave);
+  }
+  .tabla-datos tr {
+    scroll-margin-top: 5rem;
+  }
+  .nota-tabla {
+    font-size: 0.9rem;
+    color: var(--color-texto-suave);
+    margin-top: var(--espacio-2);
+    max-width: none;
+  }
+  .descargas__rejilla {
+    display: grid;
+    gap: var(--espacio-4);
+  }
+  .descargas__botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espacio-2);
+  }
+  .descargas__cita-titulo {
+    font-weight: 700;
+    margin-bottom: var(--espacio-2);
+  }
+  .descargas__cita {
+    margin: 0;
+    padding: var(--espacio-3);
+    background: var(--color-superficie-2);
+    border-radius: var(--radio);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+  }
+  .descargas code {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
+  @media (min-width: 48rem) {
+    .datos-cabecera__rejilla {
+      grid-template-columns: 1.5fr 1fr;
+    }
+    .descargas__rejilla {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (min-width: 60rem) {
+    .datos-mapa {
+      grid-template-columns: 17rem 1fr;
+      align-items: start;
+    }
+    .datos-mapa__controles {
+      order: -1;
+    }
+  }
+</style>

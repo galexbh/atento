@@ -29,6 +29,8 @@ export default defineConfig({
         "datos-abiertos",
         "creditos",
       ].map((slug) => `https://atento.galexbh.dev/legal/${slug}`),
+      // /datos (src/pages/datos/index.astro) entra sola por ser ruta estática; añadirla aquí la
+      // duplicaría. Los informes /datos/AAAA (dinámicos) se enlazan desde /datos.
       filter: (url) => !/\/(resultado|cribado|admin|api|offline)(\/|$)/.test(new URL(url).pathname),
       // Mismo formato que <link rel="canonical"> (sin barra final).
       serialize: (item) => ({

@@ -1,21 +1,22 @@
 /**
- * Lectura pública de `agregados_municipio` (nunca de filas individuales) con caché KV.
+ * Lectura pública de agregados para `/api/agregado` y `/api/agregado/periodos`.
+ *
+ * Endurecido: ya NO lee `agregados_municipio` (que tiene meses, trimestres, acumulado y
+ * municipios sin supresión complementaria, lo que permitía reconstruir celdas suprimidas por
+ * diferencia). Delega en la publicación segura anual (`src/lib/publico`), con la misma forma de
+ * respuesta que antes salvo que `n` es `null` en las celdas suprimidas y `pctAmbas` ya no se
+ * publica (siempre `null`). Solo se acepta `periodo` = año y `version` = "todas".
  */
 import { z } from "zod";
-import { claveCacheAgregado, TTL_CACHE_AGREGADOS_S } from "../api/cache";
-import { obtenerDepartamento, obtenerMunicipio } from "../catalogo/geo";
+import { type Celda, type Publicacion, VERSION_PRELIMINAR } from "../publico/datos";
+import { listarAniosPublicadosJson, obtenerPublicacionJson } from "../publico/publicar";
 import { VERSION_TODAS } from "./calcular";
 
 export const EsquemaConsultaAgregado = z
   .object({
-    periodo: z
-      .string()
-      .regex(/^(acumulado|\d{4}|\d{4}-Q[1-4]|\d{4}-(0[1-9]|1[0-2]))$/, "periodo inválido"),
+    periodo: z.string().regex(/^\d{4}$/, "periodo inválido: solo año calendario (AAAA)"),
     nivel: z.enum(["departamento", "municipio"]).default("departamento"),
-    version: z
-      .string()
-      .regex(/^[a-z0-9][a-z0-9.-]{0,63}$/i, "version inválida")
-      .default(VERSION_TODAS),
+    version: z.literal(VERSION_TODAS).default(VERSION_TODAS),
   })
   .strict();
 
@@ -24,127 +25,90 @@ export type ConsultaAgregado = z.infer<typeof EsquemaConsultaAgregado>;
 export interface DatoAgregado {
   codigo: string;
   nombre: string;
-  n: number;
+  /** null si está suprimido. */
+  n: number | null;
   /** % con inatención o hiperactividad positiva (null si suprimido). */
   pct: number | null;
   ic95: [number, number] | null;
   suprimido: boolean;
   pctInatencion: number | null;
   pctHiperactividad: number | null;
-  pctAmbas: number | null;
+  /** Ya no se publica (siempre null); se mantiene por compatibilidad de forma. */
+  pctAmbas: null;
 }
 
 export interface RespuestaAgregado {
   periodo: string;
   nivel: "departamento" | "municipio";
   version: string;
+  versionDataset: string | null;
+  preliminar: boolean | null;
   calculadoEn: string | null;
   datos: DatoAgregado[];
 }
 
-interface FilaBd {
-  departamento: string;
-  municipio: string;
-  n: number;
-  pct_inatencion: number | null;
-  pct_hiperactividad: number | null;
-  pct_combinado: number | null;
-  pct_ambas: number | null;
-  ic95_inf: number | null;
-  ic95_sup: number | null;
-  suprimido: number;
-  calculado_en: string;
+function dato(codigo: string, nombre: string, c: Celda): DatoAgregado {
+  return {
+    codigo,
+    nombre,
+    n: c.suprimido ? null : c.n,
+    pct: c.pctIndicadores,
+    ic95: c.ic95,
+    suprimido: c.suprimido,
+    pctInatencion: c.pctInatencion,
+    pctHiperactividad: c.pctHiperactividad,
+    pctAmbas: null,
+  };
 }
 
-/** Lee el agregado desde D1 y lo serializa (cuerpo JSON como string, listo para KV). */
-export async function consultarAgregado(db: D1Database, c: ConsultaAgregado): Promise<string> {
-  const filtroNivel =
-    c.nivel === "departamento"
-      ? "substr(municipio, 3, 2) = '00'"
-      : "substr(municipio, 3, 2) <> '00'";
-  const { results } = await db
-    .prepare(
-      `SELECT departamento, municipio, n, pct_inatencion, pct_hiperactividad, pct_combinado,
-              pct_ambas, ic95_inf, ic95_sup, suprimido, calculado_en
-       FROM agregados_municipio
-       WHERE periodo = ? AND version_instrumento = ? AND ${filtroNivel}
-       ORDER BY municipio`,
-    )
-    .bind(c.periodo, c.version)
-    .all<FilaBd>();
-
-  let calculadoEn: string | null = null;
-  const datos: DatoAgregado[] = results.map((f) => {
-    if (calculadoEn === null || f.calculado_en > calculadoEn) calculadoEn = f.calculado_en;
-    const codigo = c.nivel === "departamento" ? f.departamento : f.municipio;
-    const nombre =
-      c.nivel === "departamento"
-        ? (obtenerDepartamento(f.departamento)?.nombre ?? f.departamento)
-        : (obtenerMunicipio(f.municipio)?.nombre ?? f.municipio);
-    const suprimido = f.suprimido === 1;
-    return {
-      codigo,
-      nombre,
-      n: f.n,
-      pct: suprimido ? null : f.pct_combinado,
-      ic95:
-        suprimido || f.ic95_inf === null || f.ic95_sup === null ? null : [f.ic95_inf, f.ic95_sup],
-      suprimido,
-      pctInatencion: suprimido ? null : f.pct_inatencion,
-      pctHiperactividad: suprimido ? null : f.pct_hiperactividad,
-      pctAmbas: suprimido ? null : f.pct_ambas,
-    };
-  });
-
-  const respuesta: RespuestaAgregado = {
+/** Respuesta con la forma histórica de `/api/agregado`, construida desde la publicación segura. */
+export function respuestaDesdePublicacion(
+  c: ConsultaAgregado,
+  p: Publicacion | null,
+): RespuestaAgregado {
+  const datos = !p
+    ? []
+    : c.nivel === "departamento"
+      ? p.departamentos.map((d) => dato(d.codigo, d.nombre, d))
+      : p.municipios.map((m) => dato(m.codigo, m.nombre, m));
+  return {
     periodo: c.periodo,
     nivel: c.nivel,
     version: c.version,
-    calculadoEn,
+    versionDataset: p?.versionDataset ?? null,
+    preliminar: p ? p.versionDataset === VERSION_PRELIMINAR : null,
+    calculadoEn: p?.generadoEn ?? null,
     datos,
   };
-  return JSON.stringify(respuesta);
 }
 
-/** Igual que `consultarAgregado` pero pasando por la caché KV (TTL 1 h). */
 export async function consultarAgregadoConCache(
   env: Pick<Env, "DB" | "CACHE">,
   c: ConsultaAgregado,
 ): Promise<{ cuerpo: string; desdeCache: boolean }> {
-  const clave = claveCacheAgregado([c.periodo, c.nivel, c.version]);
-  const cacheado = await env.CACHE.get(clave);
-  if (cacheado !== null) return { cuerpo: cacheado, desdeCache: true };
-  const cuerpo = await consultarAgregado(env.DB, c);
-  await env.CACHE.put(clave, cuerpo, { expirationTtl: TTL_CACHE_AGREGADOS_S });
-  return { cuerpo, desdeCache: false };
+  const { cuerpo, desdeCache } = await obtenerPublicacionJson(env, Number(c.periodo));
+  const p = cuerpo === null ? null : (JSON.parse(cuerpo) as Publicacion);
+  return { cuerpo: JSON.stringify(respuestaDesdePublicacion(c, p)), desdeCache };
 }
 
 export interface PeriodosDisponibles {
+  /** Solo años con publicación ("2025", "2026"). */
   periodos: string[];
   versiones: string[];
   calculadoEn: string | null;
 }
 
-/** Periodos y versiones con agregados calculados (con caché KV). */
+/** Años publicados (con caché KV). */
 export async function listarPeriodos(
   env: Pick<Env, "DB" | "CACHE">,
 ): Promise<{ cuerpo: string; desdeCache: boolean }> {
-  const clave = claveCacheAgregado(["periodos"]);
-  const cacheado = await env.CACHE.get(clave);
-  if (cacheado !== null) return { cuerpo: cacheado, desdeCache: true };
-  const [periodos, versiones, fecha] = await env.DB.batch<Record<string, unknown>>([
-    env.DB.prepare("SELECT DISTINCT periodo FROM agregados_municipio ORDER BY periodo"),
-    env.DB.prepare(
-      "SELECT DISTINCT version_instrumento FROM agregados_municipio ORDER BY version_instrumento",
-    ),
-    env.DB.prepare("SELECT max(calculado_en) AS fecha FROM agregados_municipio"),
-  ]);
+  const { cuerpo, desdeCache } = await listarAniosPublicadosJson(env);
+  const { anios } = JSON.parse(cuerpo) as { anios: { anio: number; generadoEn: string }[] };
+  const fechas = anios.map((a) => a.generadoEn).sort();
   const respuesta: PeriodosDisponibles = {
-    periodos: (periodos?.results ?? []).map((r) => String(r.periodo)),
-    versiones: (versiones?.results ?? []).map((r) => String(r.version_instrumento)),
-    calculadoEn: (fecha?.results[0]?.fecha as string | null | undefined) ?? null,
+    periodos: anios.map((a) => String(a.anio)).sort(),
+    versiones: [VERSION_TODAS],
+    calculadoEn: fechas.at(-1) ?? null,
   };
-  const cuerpo = JSON.stringify(respuesta);
-  await env.CACHE.put(clave, cuerpo, { expirationTtl: TTL_CACHE_AGREGADOS_S });
-  return { cuerpo, desdeCache: false };
+  return { cuerpo: JSON.stringify(respuesta), desdeCache };
 }

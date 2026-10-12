@@ -1,0 +1,49 @@
+---
+import { env } from "cloudflare:workers";
+import Estado from "@/components/datos/Estado.astro";
+import Informe from "@/components/datos/Informe.astro";
+import Base from "@/layouts/Base.astro";
+import { cargarInforme, consultaControles, type DatosInforme } from "@/lib/publico/pagina";
+import { type AnioPublicado, listarAniosPublicados } from "@/lib/publico/publicar";
+
+export const prerender = false;
+
+/**
+ * /datos: informe del año publicado más reciente. `?anio=AAAA` (selector de año sin JS)
+ * redirige a la URL compartible /datos/AAAA conservando los controles.
+ */
+const params = Astro.url.searchParams;
+const anioPedido = params.get("anio");
+if (anioPedido && /^\d{4}$/.test(anioPedido)) {
+  return Astro.redirect(`/datos/${anioPedido}${consultaControles(params)}`, 303);
+}
+
+let anios: AnioPublicado[] = [];
+let datos: DatosInforme | null = null;
+let fallo = false;
+try {
+  anios = await listarAniosPublicados(env);
+  const reciente = anios[0];
+  if (reciente) datos = await cargarInforme(env, reciente.anio, anios, params);
+} catch (e) {
+  fallo = true;
+  console.error(JSON.stringify({ evento: "datos_pagina", status: 503, error: String(e) }));
+  Astro.response.status = 503;
+}
+---
+
+<Base
+  titulo={datos ? `Datos abiertos: mapa nacional ${datos.p.anio}` : "Datos abiertos: mapa nacional"}
+  descripcion="Mapa y datos abiertos del cribado comunitario de TDAH en Honduras por departamento y municipio, con supresión de celdas pequeñas. No es prevalencia."
+  canonical="/datos"
+>
+  {
+    fallo ? (
+      <Estado tipo="error" />
+    ) : datos ? (
+      <Informe {...datos} ruta="/datos" />
+    ) : (
+      <Estado tipo="vacio" />
+    )
+  }
+</Base>

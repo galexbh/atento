@@ -60,8 +60,10 @@ Otros comandos útiles:
 | Ruta | Qué hace |
 | ---- | -------- |
 | `POST /api/respuesta` | Recibe un cuestionario (JSON ≤ 32 KB, `EsquemaEnvio` estricto), aplica el límite de 5 envíos/hora/IP justo después de validar (HMAC-SHA256 de la IP con `RATE_SALT` en KV, TTL 1 h; la IP nunca se guarda) y antes de consultar D1 o Turnstile, verifica Turnstile, puntúa **en servidor** y guarda en `respuestas` solo la fecha UTC (sin hora) y la duración redondeada a 10 s. Respuestas: 201 `{ok, nivel}`, 200 `{ok, duplicado}` si el id ya existía, 400 validación, 403 Turnstile, 413, 415, 429, 503 `{ok:false, motivo:"no_guardado"}` (D1) o `motivo:"configuracion"` (producción sin `RATE_SALT`). El honeypot `hp` relleno responde 201 sin guardar. |
-| `GET /api/agregado?periodo=acumulado&nivel=departamento\|municipio&version=todas` | Lee solo `agregados_municipio` (nunca filas individuales). Caché KV 1 h, `Cache-Control: public, max-age=300, s-maxage=3600`, ETag/304. Respuesta `{periodo, nivel, version, calculadoEn, datos:[{codigo, nombre, n, pct, ic95, suprimido, pctInatencion, pctHiperactividad, pctAmbas}]}`. |
-| `GET /api/agregado/periodos` | Periodos (`acumulado`, `2026`, `2026-Q4`, `2026-10`) y versiones de instrumento con agregados. |
+| `GET /api/publico/datos?anio=2026[&formato=json\|csv]` | Publicación anual segura (ver "Regla de publicación"). JSON `{anio, preliminar, generadoEn, versionDataset, nacional, departamentos, municipios, serieTrimestral, clases}`; CSV UTF-8 con BOM, una fila por celda (`nivel,codigo,nombre,anio,n,pct_indicadores,ic95_inf,ic95_sup,pct_inatencion,pct_hiperactividad,suprimido,version_dataset,preliminar`, `n` vacío si suprimido), archivo `atento-datos-<anio>-<version>.csv`. Cabecera `Link: <https://creativecommons.org/licenses/by/4.0/>; rel="license"`. 400 con cualquier otro parámetro (meses, trimestres), 404 si el año no tiene datos publicables. Caché KV `agregado:publico:<anio>` 1 h, `Cache-Control: public, max-age=300, s-maxage=3600`, ETag/304. |
+| `GET /api/publico/anios` | Años publicables con la versión que se sirve: `{anios:[{anio, version, preliminar, generadoEn}]}`. |
+| `GET /api/agregado?periodo=2026&nivel=departamento\|municipio&version=todas` | **Compatibilidad, endurecido.** Solo `periodo` = año y `version=todas` (meses, trimestres, `acumulado` u otras versiones → 400). Delega en la publicación segura: misma forma `{periodo, nivel, version, versionDataset, preliminar, calculadoEn, datos:[{codigo, nombre, n, pct, ic95, suprimido, pctInatencion, pctHiperactividad, pctAmbas}]}` pero `n` es `null` en celdas suprimidas y `pctAmbas` siempre `null`. |
+| `GET /api/agregado/periodos` | Años publicados (`["2025", "2026"]`) y `versiones: ["todas"]`. |
 | `GET /api/geo?nivel=departamento` | GeoJSON de departamentos incrustado en el Worker (`public/geo/...geojson?raw`), `application/geo+json`, caché de 1 día (7 en borde), ETag. |
 
 **Agregados.** El cron diario (03:00 UTC, `src/worker.ts` → `src/lib/agregados/recalcular.ts`) recalcula
@@ -83,14 +85,46 @@ invalida la caché KV `agregado:*` y, cada 1 de enero, congela el año anterior 
   Obligatoria en producción (`/api/respuesta` responde 503 `configuracion` si falta); en local/preview,
   si falta, se deriva de la fecha UTC.
 
+### Regla de publicación (datos de salud de menores)
+
+La página pública `/datos` (y `/datos/AAAA`, informe anual compartible) y `/api/publico/*` leen solo la
+tabla `publicaciones` (migración 0004), generada por la función pura `construirPublicacion()`
+(`src/lib/publico/datos.ts`) a partir de conteos agrupados (`src/lib/publico/consultar.ts`, solo
+`completado = 1 AND consentimiento_investigacion = 1`). Para impedir **ataques por diferencia**:
+
+1. Granularidad pública = **año calendario** para departamentos y municipios (sin mes, trimestre ni acumulado).
+2. **Supresión primaria**: celda con `n < 5` → `suprimido: true`, sin `n` ni porcentajes ("menos de 5").
+3. **Supresión complementaria**: en cada grupo con total conocido (municipios de un departamento,
+   departamentos del total nacional, trimestres del total anual), si la suma de las celdas suprimidas
+   es 1–4 se suprime además la celda visible con menor `n` (empate: código menor) hasta llegar a ≥ 5
+   o agotar visibles. Si un departamento queda suprimido, se suprimen todos sus municipios. Si el
+   total nacional del año es < 5, no se publica nada para ese año. Toda celda suprimida se muestra
+   igual ("menos de 5*") para no revelar cuáles son pequeñas.
+4. **Serie temporal** solo nacional, por trimestre, con las mismas reglas.
+5. Porcentajes e IC95 de Wilson a 1 decimal. "% con indicadores" = inatención o hiperactividad positiva.
+6. Celdas con `n = 0` no se publican ("sin respuestas").
+7. **Preliminar del año en curso**: solo trimestres ya cerrados (`corte`, p. ej. `2026-Q3`) y solo
+   departamentos (sin municipios). Así la preliminar cambia una vez por trimestre y comparar dos
+   versiones seguidas no aísla respuestas recientes en celdas pequeñas. Los municipios aparecen con
+   la `v1` al cerrar el año. Riesgo residual aceptado: la diferencia entre la última preliminar y la
+   `v1` revela el 4.º trimestre por departamento; debe validarlo el responsable de protección de datos.
+
+**Versionado.** `publicarAnios(env, ahora)` (llamada por `recalcularAgregados`, y por tanto por el cron
+diario y el panel) sobrescribe `version = 'preliminar'` del año en curso y, para cada año cerrado sin
+`v1`, crea `v1` (inmutable: un trigger impide modificarla) y borra su preliminar. La lectura sirve la
+versión cerrada si existe; si no hay ninguna (antes del primer cron), calcula al vuelo y guarda la
+preliminar. Una prueba de propiedad (`tests/unit/publico-datos.test.ts`) verifica con datos aleatorios
+que "total − suma de visibles" nunca es 1–4. `agregados_municipio` sigue existiendo solo para el panel
+`/admin` (con sesión).
+
 ## Datos de prueba
 
 ```bash
-pnpm db:migrate:local          # esquema (migraciones 0001 y 0002)
+pnpm db:migrate:local          # esquema (migraciones 0001–0004)
 pnpm seed -- --n 2000          # respuestas sintéticas -> .wrangler/seed.sql -> D1 local (idempotente por semilla)
 pnpm agregar:local             # recalcula agregados_municipio en la D1 local e invalida la KV local
 pnpm build && pnpm preview     # http://127.0.0.1:8787
-curl "http://127.0.0.1:8787/api/agregado?periodo=acumulado&nivel=departamento"
+curl "http://127.0.0.1:8787/api/publico/datos?anio=2026"     # o abre http://127.0.0.1:8787/datos
 ```
 
 `pnpm seed` acepta `--semilla 42` (distinta semilla = distintos ids), `--solo-sql` (solo genera el archivo)

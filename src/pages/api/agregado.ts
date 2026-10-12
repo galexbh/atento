@@ -9,9 +9,12 @@ export const prerender = false;
 /**
  * GET /api/agregado?periodo=2026&nivel=departamento|municipio&version=todas
  *
- * Lee solo `agregados_municipio` (nunca respuestas individuales). Caché KV 1 h, cabeceras
+ * Endurecido: solo `periodo` = año calendario (meses, trimestres y "acumulado" -> 400) y solo
+ * `version=todas`. Delega en la publicación segura anual (supresión primaria y complementaria,
+ * ver src/lib/publico/datos.ts); las celdas suprimidas llevan `n: null`. Caché KV 1 h,
  * `Cache-Control: public, max-age=300, s-maxage=3600` y ETag (304 con If-None-Match).
- * Respuesta: {periodo, nivel, version, calculadoEn, datos:[{codigo, nombre, n, pct, ic95, suprimido, ...}]}.
+ * Respuesta: {periodo, nivel, version, versionDataset, preliminar, calculadoEn, datos:[...]}.
+ * Para datos nuevos, preferir `/api/publico/datos`.
  */
 export const GET: APIRoute = async ({ request }) => {
   const inicio = Date.now();

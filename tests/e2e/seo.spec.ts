@@ -12,6 +12,7 @@ const SITIO = "https://atento.galexbh.dev";
 const PAGINAS_PUBLICAS = [
   "/",
   "/metodologia",
+  "/datos",
   "/contacto",
   "/legal/terminos",
   "/legal/privacidad",

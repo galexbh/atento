@@ -6,7 +6,7 @@ import { error, registrar } from "@/lib/api/http";
 
 export const prerender = false;
 
-/** GET /api/agregado/periodos — periodos y versiones de instrumento con agregados calculados. */
+/** GET /api/agregado/periodos — años publicados (solo años; versión de instrumento "todas"). */
 export const GET: APIRoute = async ({ request }) => {
   const inicio = Date.now();
   try {

@@ -1,0 +1,39 @@
+---
+import { env } from "cloudflare:workers";
+import Estado from "@/components/datos/Estado.astro";
+import Informe from "@/components/datos/Informe.astro";
+import Base from "@/layouts/Base.astro";
+import { cargarInforme, type DatosInforme } from "@/lib/publico/pagina";
+import { listarAniosPublicados } from "@/lib/publico/publicar";
+
+export const prerender = false;
+
+/** /datos/AAAA: informe anual compartible. 404 si el año no tiene datos publicables. */
+const { anio: anioTexto } = Astro.params;
+if (!anioTexto || !/^\d{4}$/.test(anioTexto)) {
+  return new Response(null, { status: 404 });
+}
+const anio = Number(anioTexto);
+
+let datos: DatosInforme | null = null;
+let fallo = false;
+try {
+  const anios = await listarAniosPublicados(env);
+  datos = await cargarInforme(env, anio, anios, Astro.url.searchParams);
+} catch (e) {
+  fallo = true;
+  console.error(JSON.stringify({ evento: "datos_pagina", status: 503, error: String(e) }));
+  Astro.response.status = 503;
+}
+if (!fallo && !datos) {
+  return new Response(null, { status: 404 });
+}
+---
+
+<Base
+  titulo={`Datos abiertos: informe ${anio}`}
+  descripcion={`Informe anual ${anio} del cribado comunitario de TDAH en Honduras: mapa por departamento, municipios, evolución trimestral y descargas. No es prevalencia.`}
+  canonical={`/datos/${anio}`}
+>
+  {fallo || !datos ? <Estado tipo="error" /> : <Informe {...datos} ruta={`/datos/${anio}`} />}
+</Base>
